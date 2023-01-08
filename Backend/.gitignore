@@ -1,0 +1,13 @@
+# hardhat
+artifacts
+cache
+deployments
+node_modules
+image
+coverage
+coverage.json
+# don't push the environment vars!
+.env
+
+*.png
+*.txt
