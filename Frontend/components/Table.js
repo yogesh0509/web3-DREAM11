@@ -18,24 +18,21 @@ import Button from '@mui/material/Button';
 
 const ContractAbi = require("../constants/ContractAbi.json")
 
-function createData(name, calories, fat, carbs) {
+function createData(name, calories, fat, carbs, playersBought) {
+  let arr = []
+  for(let player in playersBought){
+    arr.push({
+      date: player.tokenId,
+      customerId: `https://testnets.opensea.io/assets/goerli/0xef48a42d3a8f582adb1af16e3ff65b21aa29b0b6/${player.tokenId}`,
+      amount: player.price
+    })
+  }
   return {
     name,
     calories,
     fat,
     carbs,
-    history: [
-      {
-        date: '2020-01-05',
-        customerId: '11091700',
-        amount: 3,
-      },
-      {
-        date: '2020-01-02',
-        customerId: 'Anonymous',
-        amount: 1,
-      },
-    ],
+    history: arr,
   };
 }
 
@@ -158,7 +155,13 @@ export default function CollapsibleTable(props) {
   console.log(props)
   const rows = []
   for (let i = 0; i < props.count; i++) {
-    rows.push(createData(props.registrants[i], props.numPlayerPurchased[i], props.moneyspent[i], 0))
+    rows.push(createData(
+      props.registrants[i],
+      props.numPlayerPurchased[i],
+      props.moneyspent[i],
+      props.withdrawableAmount[i],
+      props.playersBought[i])
+    )
   }
 
   return (

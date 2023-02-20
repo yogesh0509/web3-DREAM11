@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
-import "hardhat/console.sol";
 
 contract AuctionHouse {
     uint256 private s_auctionEndTime;
-    address private s_highestBidder;
     uint256 private s_highestBid;
     uint256 private s_lastTimeStamp;
+    address private s_highestBidder;
+    address private s_marketplace_addr;
 
     mapping(address => uint256) public pendingReturns;
     bool ended = false;
@@ -20,12 +20,20 @@ contract AuctionHouse {
     error AuctionEndAlreadyCalled();
     error NeedHigherBid(uint256 highest_bid);
     error TransferFailed();
+    error InvalidCall();
+
+    modifier onlyMarketplace() {
+        if (msg.sender != s_marketplace_addr) {
+            revert InvalidCall();
+        }
+        _;
+    }
 
     constructor(uint256 _biddingTime) {
         s_auctionEndTime = _biddingTime;
     }
-    // have start accessible only by Marketplace contract
-    function start() external{
+
+    function start() external onlyMarketplace{
         if (block.timestamp - s_lastTimeStamp < s_auctionEndTime) {
             revert AuctionNotEnded();
         }
@@ -36,7 +44,7 @@ contract AuctionHouse {
         emit AuctionStarted();
     }
 
-    function bid(address bidder) public payable virtual {
+    function bid(address bidder) public payable virtual onlyMarketplace{
         if (block.timestamp - s_lastTimeStamp > s_auctionEndTime) {
             revert AuctionHasEnded();
         }
@@ -66,7 +74,7 @@ contract AuctionHouse {
         }
     }
 
-    function auctionEnd(address payable _beneficiary) external returns(address, uint256){
+    function auctionEnd(address payable _beneficiary) external onlyMarketplace returns(address, uint256){
         if (block.timestamp - s_lastTimeStamp < s_auctionEndTime) {
             revert AuctionNotEnded();
         }
@@ -80,6 +88,10 @@ contract AuctionHouse {
             revert TransferFailed();
         }
         return (getHighestBidder(), getHighestBid());
+    }
+
+    function putMarketplace(address marketplace_addr) public{
+        s_marketplace_addr = marketplace_addr;
     }
 
     function getPendingReturns(address player) public view returns (uint256) {

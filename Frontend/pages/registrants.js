@@ -5,11 +5,17 @@ import Table from "../components/Table";
 
 const ContractAbi = require("../constants/ContractAbi.json")
 
-export default function registrants({ registrants, numPlayerPurchased, moneyspent, count }) {
+export default function registrants({ registrants, numPlayerPurchased, moneyspent, count, playersBought, withdrawableAmount }) {
     return (
         <>
             <br />
-            <Table registrants={registrants} numPlayerPurchased={numPlayerPurchased} moneyspent={moneyspent} count={count}/>
+            <Table
+                registrants={registrants}
+                numPlayerPurchased={numPlayerPurchased}
+                moneyspent={moneyspent}
+                count={count}
+                playersBought={playersBought}
+                withdrawableAmount={withdrawableAmount} />
         </>
     )
 }
@@ -30,12 +36,15 @@ export async function getServerSideProps(context) {
     const registrants = response.result
     const numPlayerPurchased = []
     const moneyspent = []
-    //const playersBought = []
+    const playersBought = []
     for (let player of registrants) {
 
         functionName = "getPlayersPurchased"
         response = await Moralis.EvmApi.utils.runContractFunction({
             abi,
+            params: {
+                registrant: player
+            },
             functionName,
             address,
             chain: EvmChain.GOERLI,
@@ -44,45 +53,52 @@ export async function getServerSideProps(context) {
         functionName = "moneyspent"
         response = await Moralis.EvmApi.utils.runContractFunction({
             abi,
+            params: {
+                registrant: player
+            },
             functionName,
             address,
             chain: EvmChain.GOERLI,
         });
         moneyspent.push(response.result)
-        // functionName = "fetchPlayers"
-        // response = await Moralis.EvmApi.utils.runContractFunction({
-        //     abi,
-        //     functionName,
-        //     address,
-        //     chain: EvmChain.GOERLI,
-        // });
-        // moneyspent.push(response.result)
+        functionName = "fetchPlayers"
+        response = await Moralis.EvmApi.utils.runContractFunction({
+            abi,
+            params: {
+                registrant: player
+            },
+            functionName,
+            address,
+            chain: EvmChain.GOERLI,
+        });
+        playersBought.push(response.result)
     }
+    abi = JSON.parse(ContractAbi["AuctionHouse"])
+    address = process.env.NEXT_PUBLIC_AUCTIONHOUSE_CONTRACT_ADDRESS;
+    functionName = "getPendingReturns"
+    const withdrawableAmount = []
 
-    // abi = JSON.parse(ContractAbi["AuctionHouse"])
-    // address = process.env.NEXT_PUBLIC_AUCTIONHOUSE_CONTRACT_ADDRESS;
-    // functionName = "pendingReturns"
-    // const withdrawableAmount = []
-
-    // for(let player of registrants){
-    //     response = await Moralis.EvmApi.utils.runContractFunction({
-    //         abi,
-    //         params: {
-    //             address: player
-    //         },
-    //         functionName,
-    //         address,
-    //         chain: EvmChain.GOERLI,
-    //     });
-    //     console.log(response.result)
-    // }
+    for (let player of registrants) {
+        response = await Moralis.EvmApi.utils.runContractFunction({
+            abi,
+            params: {
+                player: player
+            },
+            functionName,
+            address,
+            chain: EvmChain.GOERLI,
+        });
+        withdrawableAmount.push(response.result)
+    }
 
     return {
         props: {
             registrants: registrants,
             numPlayerPurchased: numPlayerPurchased,
             moneyspent: moneyspent,
-            count: registrants.length
+            count: registrants.length,
+            playersBought: playersBought,
+            withdrawableAmount: withdrawableAmount
         },
     };
 }

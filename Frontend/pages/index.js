@@ -1,14 +1,14 @@
 import Moralis from 'moralis';
 import { EvmChain } from '@moralisweb3/evm-utils';
 import Card from "../components/Card";
-
+const ethers = require("ethers")
 const ContractAbi = require("../constants/ContractAbi.json")
 
 export default function IndexPage({ metadata }) {
   return (
     <>
       <br />
-      <Card metadata={metadata}/>
+      <Card metadata={metadata} />
     </>
   )
 }
@@ -16,11 +16,11 @@ export default function IndexPage({ metadata }) {
 export async function getServerSideProps(context) {
   await Moralis.start({ apiKey: process.env.MORALIS_API_KEY });
 
-  const address = process.env.NEXT_PUBLIC_IDENTITYNFT_CONTRACT_ADDRESS;
-
+  let time = 0;
+  let address = process.env.NEXT_PUBLIC_IDENTITYNFT_CONTRACT_ADDRESS;
   let functionName = "getTokenCounter"
-  const abi = JSON.parse(ContractAbi["IdentityNft"])
-  const response = await Moralis.EvmApi.utils.runContractFunction({
+  let abi = JSON.parse(ContractAbi["IdentityNft"])
+  let response = await Moralis.EvmApi.utils.runContractFunction({
     abi,
     functionName,
     address,
@@ -44,6 +44,24 @@ export async function getServerSideProps(context) {
       })
     }
   }
+
+  address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS;
+  abi = JSON.parse(ContractAbi["Marketplace"])
+
+  const provider = new ethers.providers.WebSocketProvider(
+    `wss://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_KEY}`
+  );
+  const contract = new ethers.Contract(address, abi, provider);
+  contract.on("AuctionEnded", (from, to, value, event) => {
+    let transferEvent = {
+      from: from,
+      to: to,
+      value: value,
+      eventData: event,
+    }
+    time = 86400
+    console.log(JSON.stringify(transferEvent, null, 4))
+  })
 
   // functionName = "s_playerCount"
   // const res = await Moralis.EvmApi.utils.runContractFunction({

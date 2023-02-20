@@ -1,56 +1,57 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
-import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./AuctionHouse.sol";
 import "./IdentityNft.sol";
 import "hardhat/console.sol";
 
-contract Marketplace is Ownable, ChainlinkClient {
+contract Marketplace is Ownable, ChainlinkClient, AutomationCompatibleInterface {
     using Chainlink for Chainlink.Request;
     struct playerBought {
         uint256 tokenId;
         uint256 price;
     }
 
-    mapping(address => bool) private Buyer; // true if address(registrant) is present in the mapping
-    mapping(address => mapping(uint256 => playerBought)) // players bought by each registrant
-        private BuyerTransactions;
-    mapping(address => uint256) private BuyerTransactionCount; // no. of players bought by each registrant
-    mapping(uint256 => uint256) private PlayerScore;
-    mapping(address => uint256) private TeamScore;
-    mapping(address => uint256) private WinnerFunds;
+    mapping(address => bool) private s_buyercheck;
+    mapping(address => mapping(uint256 => playerBought))
+        private s_BuyerTransactions;
+    mapping(address => uint256) private s_BuyerTransactionCount;
+    mapping(uint256 => uint256) private s_playerScore;
+    mapping(address => uint256) private s_TeamScore;
+    mapping(address => uint256) private s_winnerFunds;
 
-    address[] public BuyerCount;
+    string private jobId;
+    address public s_winner;
+    address private oracle;
+    uint256 public constant AUCTION_TIME = 86400; // 1 Day
     uint256 public s_totalBuyerCount;
-    uint256 public s_playerCount;
+    uint256 public s_totalplayerCount;
     uint256 public s_currentplayercount;
     uint256 public s_currentAuctionTime;
     uint256 public s_biddingPrice = 1e15;
+    uint256 private fee;
+
+    address[] public s_buyers;
+    uint256[] public s_score;
+
     bool public s_auctionState;
-    address public s_winner;
-    uint256[] public score;
+    bool public s_unlock = false;
 
     AuctionHouse private s_AuctionHouseContract;
     IdentityNft private s_nft;
 
-    string private jobId;
-    uint256 private fee;
-    address private oracle;
-
-    uint256 public constant AUCTION_TIME = 86400; // 1 Day
-
     modifier registeredBuyer() {
-        if (Buyer[msg.sender] == true) {
+        if (s_buyercheck[msg.sender] == true) {
             revert BuyerAlreadyRegistered();
         }
         _;
     }
 
     modifier NotRegisteredBuyer() {
-        if (Buyer[msg.sender] != true) {
+        if (s_buyercheck[msg.sender] != true) {
             revert BuyerNotRegistered();
         }
         _;
@@ -63,20 +64,30 @@ contract Marketplace is Ownable, ChainlinkClient {
         _;
     }
 
+    modifier checklock() {
+        if (s_unlock == false) {
+            revert FundsAreLocked();
+        }
+        _;
+    }
+
     error BuyerAlreadyRegistered();
     error BuyerNotRegistered();
     error AuctionIsOpen();
     error TransferFailed();
     error WrongBid(uint256 bid);
+    error FundsAreLocked();
 
-    // make events indexed
-
-    event PlayerBid(uint256 tokenId);
-    event BuyerRegistered(address registrant);
-    event AuctionEnded(address winner, uint256 amount);
-    event AuctionStarted(uint256 tokenId);
+    event PlayerBid(uint256 indexed tokenId);
+    event BuyerRegistered(address indexed registrant);
+    event AuctionEnded(address indexed winner, uint256 indexed amount);
+    event AuctionStarted(uint256 indexed tokenId);
     event RequestFulfilled(bytes32 indexed requestId);
-    event HighestBidIncrease(uint256 tokenId, address bidder, uint256 amount);
+    event HighestBidIncrease(
+        uint256 indexed tokenId,
+        address indexed bidder,
+        uint256 indexed amount
+    );
 
     constructor(
         address payable _addr1,
@@ -87,7 +98,7 @@ contract Marketplace is Ownable, ChainlinkClient {
     ) {
         s_nft = IdentityNft(_addr1);
         s_AuctionHouseContract = AuctionHouse(_addr2);
-        s_playerCount = s_nft.getTokenCounter();
+        s_totalplayerCount = s_nft.getTokenCounter();
         s_auctionState = false;
         s_currentAuctionTime = block.timestamp + AUCTION_TIME;
 
@@ -103,8 +114,8 @@ contract Marketplace is Ownable, ChainlinkClient {
     }
 
     function register() public registeredBuyer checkauctionState {
-        Buyer[msg.sender] = true;
-        BuyerCount.push(msg.sender);
+        s_buyercheck[msg.sender] = true;
+        s_buyers.push(msg.sender);
         s_totalBuyerCount += 1;
         emit BuyerRegistered(msg.sender);
     }
@@ -141,28 +152,30 @@ contract Marketplace is Ownable, ChainlinkClient {
             bytes memory /* performData */
         )
     {
-        if (s_currentplayercount < s_playerCount) {
+        if (s_currentplayercount < s_totalplayerCount) {
             upkeepNeeded = (block.timestamp - s_currentAuctionTime >=
                 AUCTION_TIME);
-        } else if(s_currentplayercount == s_playerCount){
+        } else if (s_currentplayercount == s_totalplayerCount) {
             upkeepNeeded = true;
-        }
-        else{
+        } else {
             upkeepNeeded = false;
         }
     }
 
     function performUpkeep(
         bytes calldata /*performData*/
-    ) external returns (bytes32 requestId) {
-        s_playerCount = s_nft.getTokenCounter();
-        if (s_currentplayercount < s_playerCount) {
+    ) external {
+        s_totalplayerCount = s_nft.getTokenCounter();
+        if (s_currentplayercount < s_totalplayerCount) {
             if (
                 (block.timestamp - s_currentAuctionTime >= AUCTION_TIME) &&
                 !s_auctionState
             ) {
                 startAuction();
-            } else {
+            } else if (
+                (block.timestamp - s_currentAuctionTime >= AUCTION_TIME) &&
+                s_auctionState
+            ) {
                 s_auctionState = false;
                 s_currentAuctionTime = block.timestamp;
                 (
@@ -172,18 +185,18 @@ contract Marketplace is Ownable, ChainlinkClient {
                 emit AuctionEnded(s_highestBidder, s_highestBid);
 
                 s_biddingPrice = 1e15;
-                BuyerTransactions[s_highestBidder][
-                    BuyerTransactionCount[s_highestBidder]
+                s_BuyerTransactions[s_highestBidder][
+                    s_BuyerTransactionCount[s_highestBidder]
                 ] = playerBought(s_currentplayercount, s_highestBid);
-                BuyerTransactionCount[s_highestBidder]++;
+                s_BuyerTransactionCount[s_highestBidder]++;
                 s_currentplayercount++;
             }
-        } else {
+        } else if (s_currentplayercount == s_totalplayerCount) {
             Chainlink.Request memory request = buildOperatorRequest(
                 stringToBytes32(jobId),
                 this.fulfill.selector
             );
-            return sendOperatorRequestTo(oracle, request, fee);
+            sendOperatorRequestTo(oracle, request, fee);
         }
     }
 
@@ -191,32 +204,37 @@ contract Marketplace is Ownable, ChainlinkClient {
         public
         recordChainlinkFulfillment(requestId)
     {
-        score = abi.decode(_score, (uint256[]));
-        for (uint256 i = 0; i < s_playerCount; i++) {
-            PlayerScore[i] = score[i];
+        emit RequestFulfilled(requestId);
+        s_score = abi.decode(_score, (uint256[]));
+        for (uint256 i = 0; i < s_totalplayerCount; i++) {
+            s_playerScore[i] = s_score[i];
         }
         s_winner = calculateTeamScore();
-        WinnerFunds[s_winner] = (9 * address(this).balance) / 10;
-        emit RequestFulfilled(requestId);
+        s_unlock = true;
+        s_winnerFunds[s_winner] = (9 * address(this).balance) / 10;
     }
 
     function calculateTeamScore() internal returns (address) {
         address maxTeam;
         uint256 maxScore;
         for (uint256 i = 0; i < s_totalBuyerCount; i++) {
-            address Team = BuyerCount[i];
+            address Team = s_buyers[i];
             uint256 result;
-            for (uint256 j = 0; j < BuyerTransactionCount[Team]; j++) {
-                uint256 id = BuyerTransactions[Team][j].tokenId;
-                result += PlayerScore[id];
+            for (uint256 j = 0; j < s_BuyerTransactionCount[Team]; j++) {
+                uint256 id = s_BuyerTransactions[Team][j].tokenId;
+                result += s_playerScore[id];
             }
-            TeamScore[Team] += result;
+            s_TeamScore[Team] += result;
             if (result > maxScore) {
                 maxTeam = Team;
                 maxScore = result;
             }
         }
         return maxTeam;
+    }
+
+    function getCurrentPlayerCount() public view returns (uint256) {
+        return s_currentplayercount;
     }
 
     function getAuctionBid() public view returns (uint256) {
@@ -228,39 +246,53 @@ contract Marketplace is Ownable, ChainlinkClient {
     }
 
     function getTeamScore(address registrant) public view returns (uint256) {
-        return TeamScore[registrant];
+        return s_TeamScore[registrant];
     }
 
     function getBuyers() public view returns (address[] memory) {
-        return BuyerCount;
+        return s_buyers;
     }
 
-    function getPlayersPurchased() public view returns (uint256) {
-        return BuyerTransactionCount[msg.sender]; // parameter
+    function getPlayersPurchased(address registrant)
+        public
+        view
+        returns (uint256)
+    {
+        return s_BuyerTransactionCount[registrant];
     }
 
-    function moneyspent() public view returns (uint256) {
+    function moneyspent(address registrant) public view returns (uint256) {
         uint256 sum = 0;
-        for (uint256 i = 0; i < BuyerTransactionCount[msg.sender]; i++) {
-            sum += BuyerTransactions[msg.sender][i].price;
+        for (uint256 i = 0; i < s_BuyerTransactionCount[registrant]; i++) {
+            sum += s_BuyerTransactions[registrant][i].price;
         }
-        return sum; // parameter
+        return sum;
     }
 
-    function fetchPlayers(address registrant) public view returns(playerBought[] memory){
-        
-        uint256 count = BuyerTransactionCount[registrant];
-        playerBought[] memory players = new playerBought[](count); 
-        for(uint256 i = 0; i< count; i++){
-            players[i] = BuyerTransactions[registrant][i];
+    function fetchPlayers(address registrant)
+        public
+        view
+        returns (playerBought[] memory)
+    {
+        uint256 count = s_BuyerTransactionCount[registrant];
+        playerBought[] memory players = new playerBought[](count);
+        for (uint256 i = 0; i < count; i++) {
+            players[i] = s_BuyerTransactions[registrant][i];
         }
         return players;
     }
 
-    function withdraw() public payable {
-        (bool success, ) = (msg.sender).call{value: WinnerFunds[msg.sender]}(
+    function withdrawWinnerFunds() public payable {
+        (bool success, ) = (msg.sender).call{value: s_winnerFunds[msg.sender]}(
             ""
         );
+        if (!success) {
+            revert TransferFailed();
+        }
+    }
+
+    function withdrawEth() public payable onlyOwner checklock {
+        (bool success, ) = (msg.sender).call{value: address(this).balance}("");
         if (!success) {
             revert TransferFailed();
         }

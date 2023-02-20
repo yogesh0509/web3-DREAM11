@@ -178,6 +178,7 @@ export async function getServerSideProps(context) {
         chain: EvmChain.GOERLI,
         tokenId,
     });
+    
     // let functionName = "s_biddingPrice"
     // const res = await Moralis.EvmApi.utils.runContractFunction({
     //     abi,
@@ -187,11 +188,22 @@ export async function getServerSideProps(context) {
     //   });
     //   const bid = res.result
 
+
+    // let functionName = "getCurrentPlayerCount"
+    // const res = await Moralis.EvmApi.utils.runContractFunction({
+    //     abi,
+    //     functionName,
+    //     address,
+    //     chain: EvmChain.GOERLI,
+    //   });
+    //   const current_player = res.result
+
     return {
         props: {
             metadata: response.result.metadata,
             tokenId: context.params.tokenId
             // bid: bid
+            // current_player: current_player
         },
     };
 }
