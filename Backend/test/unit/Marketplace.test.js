@@ -6,25 +6,30 @@ const tokenUri = "ipfs://bafyreiflh4wjd2shgk2kguff5gl5uv6ifpdszfgfep2itve3tdzqug
 const payment = '3000000000000000000'
 const callbackValue = "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000004"
 const bid = 1e15
+const AUCTION_TIME = 3600;
 
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("marketplace unit tests", () => {
-        let MarketplaceContract, Marketplace, oracleContract, oracle, linkContract, link, IdentityNftContract, IdentityNft
+        let MarketplaceContract, Marketplace, oracleContract,AuctionHouseContract, oracle, linkContract, link, IdentityNftContract, IdentityNft, AuctionHouse
 
         beforeEach(async () => {
             accounts = await ethers.getSigners()
-            await deployments.fixture(["main"])
+            await deployments.fixture(["all"])
             MarketplaceContract = await ethers.getContract("Marketplace")
             oracleContract = await ethers.getContract("MockOracle")
             linkContract = await ethers.getContract("LinkToken")
             IdentityNftContract = await ethers.getContract("IdentityNft")
+            AuctionHouseContract = await ethers.getContract("AuctionHouse")
 
             Marketplace = MarketplaceContract.connect(accounts[0])
             oracle = oracleContract.connect(accounts[0])
             link = linkContract.connect(accounts[0])
             IdentityNft = IdentityNftContract.connect(accounts[0])
+            AuctionHouse = AuctionHouseContract.connect(accounts[0])
+
             await IdentityNft.mintNft(tokenUri);
+            await AuctionHouse.putMarketplace(Marketplace.address)
 
         })
 
@@ -36,7 +41,7 @@ const bid = 1e15
             it("check current player count", async () => {
                 // We have minted a nft before deployment of Marketplace contract. 
                 // check deploy scripts....
-                assert.equal((await Marketplace.s_playerCount()).toString(), "0")
+                assert.equal((await Marketplace.s_totalplayerCount()).toString(), "0")
             })
         })
 
@@ -51,13 +56,9 @@ const bid = 1e15
                 await expect(Marketplace.bid({value: bid})).to.be.revertedWith("AuctionHasEnded")
             })
 
-            it("reverts if start auction is called and caller is not the owner", async () => {
-                Marketplace = MarketplaceContract.connect(accounts[1])
-                await expect(Marketplace.startAuction()).to.be.revertedWith("Ownable: caller is not the owner")
-            })
-
             it("auction will be started if enough time has passed", async () => {
-                await network.provider.send("evm_increaseTime", [2*86400])
+
+                await network.provider.send("evm_increaseTime", [2*AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 // This will trigger the start auction function.
                 await expect(Marketplace.performUpkeep([])).to.emit(Marketplace, "AuctionStarted");
@@ -69,7 +70,7 @@ const bid = 1e15
 
             it("initial start auction upkeepNeeded", async () => {
 
-                await network.provider.send("evm_increaseTime", [2*86400])
+                await network.provider.send("evm_increaseTime", [2*AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
 
                 const { upkeepNeeded } = await Marketplace.callStatic.checkUpkeep("0x")
@@ -78,11 +79,11 @@ const bid = 1e15
 
             it("end auction upkeepNeeded", async () => {
 
-                await network.provider.send("evm_increaseTime", [2 * 86400])
+                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
 
                 const { upkeepNeeded } = await Marketplace.callStatic.checkUpkeep("0x")
@@ -96,7 +97,7 @@ const bid = 1e15
             beforeEach(async () => {
                 await Marketplace.register()
 
-                await network.provider.send("evm_increaseTime", [2 * 86400])
+                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
@@ -105,7 +106,7 @@ const bid = 1e15
             })
 
             it("end the auction using chainlink keepers", async () => {
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await expect(Marketplace.performUpkeep([])).to.emit(Marketplace, "AuctionEnded");
 
@@ -114,7 +115,7 @@ const bid = 1e15
             it("check if the funds have been transferred", async () => {
                 assert.equal((await Marketplace.provider.getBalance(Marketplace.address)).toString(), "0")
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
                 assert.equal((await Marketplace.provider.getBalance(Marketplace.address)).toString(), bid)
@@ -129,15 +130,15 @@ const bid = 1e15
 
                 await Marketplace.register()
 
-                await network.provider.send("evm_increaseTime", [2 * 86400])
+                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 tx = await Marketplace.performUpkeep([])
                 txreceipt = await tx.wait(1)
@@ -164,32 +165,40 @@ const bid = 1e15
             it("no of players purchasd by a registrant", async () => {
 
                 await Marketplace.register()
-                await network.provider.send("evm_increaseTime", [2 * 86400])
+                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
                 await Marketplace.bid({ value: bid })
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
-                assert.equal((await Marketplace.getPlayersPurchased()).toString(), 1)
+                assert.equal((await Marketplace.getPlayersPurchased(accounts[0].address)).toString(), 1)
             })
             it("sum spent by a registrant", async () => {
 
                 await Marketplace.register()
-                await network.provider.send("evm_increaseTime", [2 * 86400])
+                Marketplace = MarketplaceContract.connect(accounts[1])
+                await Marketplace.register()
+                Marketplace = MarketplaceContract.connect(accounts[0])
+
+                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
                 await Marketplace.bid({ value: bid })
+                Marketplace = MarketplaceContract.connect(accounts[1])
+                await Marketplace.bid({ value: bid + 5e14})
+                Marketplace = MarketplaceContract.connect(accounts[0])
+                await Marketplace.bid({ value: bid + 1e15})
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
-                assert.equal((await Marketplace.moneyspent()).toString(), bid)
+                assert.equal((await Marketplace.moneyspent(accounts[0].address)).toString(), bid+1e15)
             })
             it("return team score and winner", async () => {
 
@@ -201,30 +210,30 @@ const bid = 1e15
                 await Marketplace.register()
                 Marketplace = MarketplaceContract.connect(accounts[0])
 
-                await network.provider.send("evm_increaseTime", [2 * 86400])
+                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
                 await Marketplace.bid({ value: bid })
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
 
                 Marketplace = MarketplaceContract.connect(accounts[1])
-                await Marketplace.bid({ value: bid + 5e14 })
+                await Marketplace.bid({ value: bid })
                 Marketplace = MarketplaceContract.connect(accounts[0])
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 await Marketplace.performUpkeep([])
 
-                await network.provider.send("evm_increaseTime", [86400])
+                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 const tx = await Marketplace.performUpkeep([])
                 const txreceipt = await tx.wait(1)

@@ -10,8 +10,8 @@ const bodyParser = require('body-parser')
 const app = express()
 const port = process.env.EA_PORT || 8080
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY
-const address = process.env.GOERLI_CONTRACT_ADDRESS
-const chain = EvmChain.GOERLI
+const address = process.env.SEPOLIA_CONTRACT_ADDRESS
+const chain = EvmChain.SEPOLIA
 const abiCoder = ethers.utils.defaultAbiCoder;
 
 app.use(bodyParser.json())
@@ -32,7 +32,7 @@ function fetch(data) {
 function calculateCount(len) {
   return new Promise(async (resolve, reject) => {
     let arr = []
-    for (let i = 1; i < len; i++) {
+    for (let i = 0; i < len; i++) {
       arr.push(await fetch(i))
     }
     resolve(arr);
@@ -50,6 +50,7 @@ app.post('/', async (req, res) => {
     chain,
   });
   const arr = await calculateCount(response.result)
+  console.log(arr)
   res.status(200).json({
     data: abiCoder.encode(["uint256[]"], [arr])
   })

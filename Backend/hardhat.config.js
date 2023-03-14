@@ -26,16 +26,20 @@ module.exports = {
     ],
   },
   networks: {
-    hardhat: {
-      forking: {
-        url: process.env.GOERLI_URL
-      }
-    },
     goerli: {
       url: process.env.GOERLI_URL || "",
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
       chainId: 5,
+      gas: 2100000,
+      gasPrice: 8000000000
+    },
+
+    sepolia: {
+      url: process.env.SEPOLIA_URL || "",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      chainId: 11155111,
       gas: 2100000,
       gasPrice: 8000000000
     },

@@ -1,7 +1,7 @@
 const { developmentChains } = require("../helper-hardhat-config")
 const { verify } = require("../utils/verify")
 
-const AUCTION_TIME = 86400;
+const AUCTION_TIME = 3600;
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments

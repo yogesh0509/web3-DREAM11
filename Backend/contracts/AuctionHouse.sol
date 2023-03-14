@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
-contract AuctionHouse {
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract AuctionHouse is Ownable{
     uint256 private s_auctionEndTime;
     uint256 private s_highestBid;
     uint256 private s_lastTimeStamp;
     address private s_highestBidder;
     address private s_marketplace_addr;
 
-    mapping(address => uint256) public pendingReturns;
-    bool ended = false;
+    mapping(address => uint256) private pendingReturns;
+    bool public ended = false;
 
     event HighestBidIncrease(address bidder, uint256 amount);
     event AuctionEnded(address winner, uint256 amount);
@@ -90,7 +92,7 @@ contract AuctionHouse {
         return (getHighestBidder(), getHighestBid());
     }
 
-    function putMarketplace(address marketplace_addr) public{
+    function putMarketplace(address marketplace_addr) public onlyOwner{
         s_marketplace_addr = marketplace_addr;
     }
 

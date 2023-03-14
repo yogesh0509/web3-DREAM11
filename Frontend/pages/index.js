@@ -24,7 +24,7 @@ export async function getServerSideProps(context) {
     abi,
     functionName,
     address,
-    chain: EvmChain.GOERLI,
+    chain: EvmChain.SEPOLIA,
   });
   const total_players = response.result
   let metadata = []
@@ -34,7 +34,7 @@ export async function getServerSideProps(context) {
     let tokenId = String(i)
     const response = await Moralis.EvmApi.nft.getNFTMetadata({
       address,
-      chain: EvmChain.GOERLI,
+      chain: EvmChain.SEPOLIA,
       tokenId,
     });
     if (response) {
@@ -49,7 +49,7 @@ export async function getServerSideProps(context) {
   abi = JSON.parse(ContractAbi["Marketplace"])
 
   const provider = new ethers.providers.WebSocketProvider(
-    `wss://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_KEY}`
+    `wss://sepolia.infura.io/ws/v3/${process.env.NEXT_PUBLIC_INFURA_KEY}`
   );
   const contract = new ethers.Contract(address, abi, provider);
   contract.on("AuctionEnded", (from, to, value, event) => {
@@ -59,7 +59,7 @@ export async function getServerSideProps(context) {
       value: value,
       eventData: event,
     }
-    time = 86400
+    time = 3600
     console.log(JSON.stringify(transferEvent, null, 4))
   })
 
@@ -68,7 +68,7 @@ export async function getServerSideProps(context) {
   //   abi,
   //   functionName,
   //   address,
-  //   chain: EvmChain.GOERLI,
+  //   chain: EvmChain.SEPOLIA,
   // });
   // const curr_auction_player = res.result
 

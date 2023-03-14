@@ -1,6 +1,8 @@
 import { ConnectButton, useNotification } from "web3uikit"
 import { useState } from 'react';
 import { useWeb3Contract } from "react-moralis";
+import { useRouter } from 'next/router'
+
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -21,6 +23,7 @@ function Navbar() {
     const MarketplaceAddress = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS
 
     const dispatch = useNotification();
+    const router = useRouter()
 
     const handleSuccessNotification = () => {
         dispatch({
@@ -68,6 +71,11 @@ function Navbar() {
                 handleErrorNotification();
             }
         })
+        setAnchorElNav(null);
+    }
+
+    const handleRegistrants = () => {
+        router.push('/registrants')
         setAnchorElNav(null);
     }
 
@@ -127,7 +135,7 @@ function Navbar() {
                                 <Typography textAlign="center">Register</Typography>
                             </MenuItem>
 
-                            <MenuItem onClick={handleCloseNavMenu}>
+                            <MenuItem onClick={handleRegistrants}>
                                 <Typography textAlign="center">Players Sold</Typography>
                             </MenuItem>
                         </Menu>
@@ -160,7 +168,7 @@ function Navbar() {
                             </Button>
 
                             <Button
-                                onClick={handleCloseNavMenu}
+                                onClick={handleRegistrants}
                                 sx={{ mx: 1, my: 2, color: 'black', display: 'block' }}
                             >
                                 Players Sold

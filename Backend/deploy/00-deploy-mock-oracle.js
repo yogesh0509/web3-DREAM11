@@ -31,4 +31,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 }
 
-module.exports.tags = ["all", "mock_oracle", "main"]
+module.exports.tags = ["all", "mock_oracle"]

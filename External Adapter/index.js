@@ -5,8 +5,8 @@ const { EvmChain } = require("@moralisweb3/common-evm-utils")
 const ContractAbi = require("./constants/ContractAbi.json")
 require('dotenv').config()
 
-const address = process.env.GOERLI_CONTRACT_ADDRESS
-const chain = EvmChain.GOERLI
+const address = process.env.SEPOLIA_CONTRACT_ADDRESS
+const chain = EvmChain.SEPOLIA
 
 // Define custom error scenarios for the API.
 // Return true for the adapter to retry.
@@ -59,9 +59,9 @@ const createRequest = async (input, callback) => {
       // It's common practice to store the desired value at the top-level
       // result key. This allows different adapters to be compatible with
       // one another.
-      if (role == 'batsman') { response.data.result = response.data.currRank.bat.t20Rank }
-      else if (role == 'bowler') { response.data.result = response.data.currRank.bowl.t20Rank }
-      else { response.data.result = response.data.currRank.all.t20Rank }
+      if (role == "batsman") {response.data.result = response.data.currRank.bat.odiRank }
+      else if (role == "bowler") { response.data.result = response.data.currRank.bowl.odiRank }
+      else { response.data.result = response.data.currRank.all.odiRank }
       callback(response.status, Requester.success(jobRunID, response))
     })
     .catch(error => {

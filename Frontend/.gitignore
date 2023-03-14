@@ -6,7 +6,6 @@
 
 # testing
 /coverage
-/components/LotteryEntrance.js
 
 # production
 /build

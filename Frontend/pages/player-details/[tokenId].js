@@ -39,7 +39,7 @@ export function UpdateTx(props) {
     )
 }
 
-export default function player_details({ metadata, tokenId }) {
+export default function player_details({ metadata, tokenId, bid }) {
 
     const [isTransaction, setTransaction] = useState([])
     const { isWeb3Enabled } = useMoralis();
@@ -78,7 +78,7 @@ export default function player_details({ metadata, tokenId }) {
             abi: abi,
             contractAddress: MarketplaceAddress,
             functionName: "bid",
-            msgValue: 4e15 + 5e14,
+            msgValue: bid,
             params: {}
         })
 
@@ -104,7 +104,7 @@ export default function player_details({ metadata, tokenId }) {
     const posttx = async (bidder) => {
         const postData = {
             bidder: bidder,
-            bid: 4e15 + 5e14
+            bid: bid
 
         }
         // const newPostKey = push(child(ref(db), `transaction`)).key
@@ -116,7 +116,7 @@ export default function player_details({ metadata, tokenId }) {
                 updates[tokenId] = [postData]
             }
             else {
-                updates[tokenId = snapshot.val()]
+                updates[tokenId] = snapshot.val()
                 updates[tokenId].push(postData)
             }
             return update(ref(db), updates);
@@ -170,39 +170,32 @@ export default function player_details({ metadata, tokenId }) {
 export async function getServerSideProps(context) {
     await Moralis.start({ apiKey: process.env.MORALIS_API_KEY });
 
-    const address = process.env.NEXT_PUBLIC_IDENTITYNFT_CONTRACT_ADDRESS;
+    let address = process.env.NEXT_PUBLIC_IDENTITYNFT_CONTRACT_ADDRESS;
+    const abi = JSON.parse(ContractAbi["Marketplace"])
 
     let tokenId = context.params.tokenId
     const response = await Moralis.EvmApi.nft.getNFTMetadata({
         address,
-        chain: EvmChain.GOERLI,
+        chain: EvmChain.SEPOLIA,
         tokenId,
     });
     
-    // let functionName = "s_biddingPrice"
-    // const res = await Moralis.EvmApi.utils.runContractFunction({
-    //     abi,
-    //     functionName,
-    //     address,
-    //     chain: EvmChain.GOERLI,
-    //   });
-    //   const bid = res.result
-
-
-    // let functionName = "getCurrentPlayerCount"
-    // const res = await Moralis.EvmApi.utils.runContractFunction({
-    //     abi,
-    //     functionName,
-    //     address,
-    //     chain: EvmChain.GOERLI,
-    //   });
-    //   const current_player = res.result
+    address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS
+    let functionName = "getAuctionBid"
+    const res = await Moralis.EvmApi.utils.runContractFunction({
+        abi,
+        functionName,
+        address,
+        chain: EvmChain.SEPOLIA,
+      });
+      const bid = res.result
+      console.log(bid)
 
     return {
         props: {
             metadata: response.result.metadata,
-            tokenId: context.params.tokenId
-            // bid: bid
+            tokenId: context.params.tokenId,
+            bid: bid
             // current_player: current_player
         },
     };

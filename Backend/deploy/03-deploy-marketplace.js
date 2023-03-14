@@ -2,6 +2,8 @@ const { ethers } = require("hardhat");
 const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 const { verify } = require("../utils/verify")
 
+const AUCTION_TIME = 3600;
+
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
@@ -29,7 +31,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         LinkTokenAddress = networkConfig[chainId]["LinkTokenAddress"];
     }
 
-    const arguments = [IdentityNftAddress, AuctionHouseAddress, MockOracleAddress, jobId, LinkTokenAddress]
+    const arguments = [IdentityNftAddress, AuctionHouseAddress, AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress]
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6
@@ -46,4 +48,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 }
 
-module.exports.tags = ["all", "marketplace", "main"]
+module.exports.tags = ["all", "marketplace", "master"]
