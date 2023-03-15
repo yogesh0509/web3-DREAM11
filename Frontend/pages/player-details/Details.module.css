@@ -16,12 +16,13 @@
     overflow: hidden;
     margin: 25px;
   }
-  .big_img img{
+  .big_img{
     width: 100%;
     height: 100%;
     max-height: 400px;
     display: block;
     object-fit: cover;
+    position: relative;
   }
   
   .details .box{
@@ -63,4 +64,33 @@
     padding: 10px 25px;
     margin-top: 15px;
   }
+
+  .parent_img{
+    width: 100%;
+    height: 100%;
+    max-height: 400px;
+    display: block;
+    object-fit: cover;
+    position: relative;
+  }
+
+  .parent_img_sold {
+    width: 100%;
+    height: 100%;
+    max-height: 400px;
+    display: block;
+    object-fit: cover;
+    position: relative;
+    opacity: 60%;
+  }
   
+  .image_over {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+  }
+  
+  .icon_img {
+    height: 20vh;
+    width: 25vh;
+  }

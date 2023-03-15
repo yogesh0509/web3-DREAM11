@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ethers } from 'ethers';
 import { useNotification } from "web3uikit"
 import { useWeb3Contract, useMoralis } from "react-moralis";
 import Box from '@mui/material/Box';
@@ -15,16 +16,18 @@ import Paper from '@mui/material/Paper';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import Button from '@mui/material/Button';
+import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
 
+import styles from "./Table.module.css"
 const ContractAbi = require("../constants/ContractAbi.json")
 
 function createData(name, calories, fat, carbs, playersBought) {
   let arr = []
-  for(let player in playersBought){
+  for (let player of playersBought) {
     arr.push({
-      date: player.tokenId,
-      customerId: `https://testnets.opensea.io/assets/goerli/0xef48a42d3a8f582adb1af16e3ff65b21aa29b0b6/${player.tokenId}`,
-      amount: player.price
+      date: player[0],
+      customerId: `https://testnets.opensea.io/assets/goerli/0xef48a42d3a8f582adb1af16e3ff65b21aa29b0b6/${player[0]}`,
+      amount: player[1]
     })
   }
   return {
@@ -42,7 +45,9 @@ function Row(props) {
   const [open, setOpen] = React.useState(false);
 
   const abi = JSON.parse(ContractAbi["AuctionHouse"])
+  const abiMarketplace = JSON.parse(ContractAbi["Marketplace"])
   const AuctionHouseAddress = process.env.NEXT_PUBLIC_AUCTIONHOUSE_CONTRACT_ADDRESS
+  const MarketplaceAddress = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS
 
   const dispatch = useNotification();
 
@@ -73,8 +78,17 @@ function Row(props) {
       params: {}
     })
 
+  const { runContractFunction: withdrawWinnerFunds,
+    isLoadingWinner,
+    isFetchingWinner, } = useWeb3Contract({
+      abi: abiMarketplace,
+      contractAddress: MarketplaceAddress,
+      functionName: "withdrawWinnerFunds",
+      params: {}
+    })
+
   const handleWithdraw = async (event) => {
-    let current_account = event.target.parentNode.previousSibling.previousSibling.previousSibling.innerHTML
+    let current_account = event.target.parentNode.previousSibling.previousSibling.previousSibling.previousSibling.innerHTML
     if (account == current_account.toLowerCase()) {
       await withdraw({
         onSuccess: async (tx) => {
@@ -93,9 +107,29 @@ function Row(props) {
     }
   }
 
+  const handleWinner = async (event) => {
+    let current_account = event.target.parentNode.previousSibling.previousSibling.previousSibling.innerHTML
+    if (account == current_account.toLowerCase()) {
+      await withdrawWinnerFunds({
+        onSuccess: async (tx) => {
+          await tx.wait(1);
+          handleSuccessNotification("Funds have been transferred!!");
+        },
+        onError: async (err) => {
+          console.log(err)
+          handleErrorNotification();
+        }
+      })
+    }
+    else {
+      console.log("Wrong account")
+      handleErrorNotification();
+    }
+  }
+
   return (
     <React.Fragment>
-      <TableRow sx={{ '& > *': { borderBottom: 'unset' } }}>
+      <TableRow sx={{ '& > *': { borderBottom: 'unset' } }} className={props.winner == row.name ? styles.winner_row : ""}>
         <TableCell>
           <IconButton
             aria-label="expand row"
@@ -105,13 +139,22 @@ function Row(props) {
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
+        <TableCell>
+          {props.winner == row.name ? <MilitaryTechIcon /> : <div />}
+        </TableCell>
         <TableCell component="th" scope="row">
           {row.name}
         </TableCell>
         <TableCell align="right">{row.calories}</TableCell>
-        <TableCell align="right">{row.fat}</TableCell>
+        <TableCell align="right">{ethers.utils.formatEther(row.fat, "ether")} ETH</TableCell>
         <TableCell align="right">
-          <Button variant="contained" color="error" onClick={handleWithdraw} disabled={isLoading || isFetching}>{row.carbs}</Button>
+          {props.winner == row.name
+            ?
+            <Button variant="contained" color="success" onClick={handleWinner} disabled={isLoadingWinner || isFetchingWinner}>{ethers.utils.formatEther(props.winnerAmount, "ether")} ETH</Button>
+            : <div />}
+        </TableCell>
+        <TableCell align="right">
+          <Button variant="contained" color="error" onClick={handleWithdraw} disabled={isLoading || isFetching}>{ethers.utils.formatEther(row.carbs, "ether")} ETH</Button>
         </TableCell>
       </TableRow>
       <TableRow>
@@ -136,7 +179,7 @@ function Row(props) {
                         {historyRow.date}
                       </TableCell>
                       <TableCell>{historyRow.customerId}</TableCell>
-                      <TableCell align="right">{historyRow.amount}</TableCell>
+                      <TableCell align="right">{ethers.utils.formatEther(historyRow.amount, "ether")} ETH</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -170,15 +213,17 @@ export default function CollapsibleTable(props) {
         <TableHead>
           <TableRow>
             <TableCell />
+            <TableCell />
             <TableCell>Registrant</TableCell>
             <TableCell align="right">Number of Players Purshased</TableCell>
             <TableCell align="right">Amount spent</TableCell>
+            <TableCell align="right">{props.winner != "0x0000000000000000000000000000000000000000" ? "Winner Amount" : ""}</TableCell>
             <TableCell align="right">Withdrawable amount</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {rows.map((row) => (
-            <Row key={row.name} row={row} />
+            <Row key={row.name} row={row} winner={props.winner} winnerAmount={props.winnerAmount} />
           ))}
         </TableBody>
       </Table>

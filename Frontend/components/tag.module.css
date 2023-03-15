@@ -1,0 +1,44 @@
+.root {
+  min-width: 200;
+  position: relative;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.gridContainer {
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+.sold {
+  opacity: 70%;
+}
+
+.image_over {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+}
+
+.icon_img {
+  height: 17vh;
+  width: 20vh;
+}
+
+.overlay {
+  position: absolute; 
+  bottom: 0; 
+  background: rgb(0, 0, 0);
+  background: rgba(0, 0, 0, 0.5); /* Black see-through */
+  color: #f1f1f1; 
+  width: 100%;
+  transition: .5s ease;
+  opacity:0;
+  color: white;
+  font-size: 20px;
+  padding: 20px;
+  text-align: center;
+}
+
+.root:hover .overlay {
+  opacity: 1;
+}

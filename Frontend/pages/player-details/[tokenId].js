@@ -6,7 +6,7 @@ import { useNotification } from "web3uikit";
 import { EvmChain } from '@moralisweb3/evm-utils';
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, child, push, update } from "firebase/database";
-import Styles from "../../styles/Details.module.css"
+import styles from "./Details.module.css"
 
 const ContractAbi = require("../../constants/ContractAbi.json")
 
@@ -39,7 +39,7 @@ export function UpdateTx(props) {
     )
 }
 
-export default function player_details({ metadata, tokenId, bid }) {
+export default function player_details({ metadata, tokenId, bid, curr }) {
 
     const [isTransaction, setTransaction] = useState([])
     const { isWeb3Enabled } = useMoralis();
@@ -146,20 +146,26 @@ export default function player_details({ metadata, tokenId, bid }) {
     }
 
     return (
-        <div className={Styles.app}>
-            <div className={Styles.details} key={metadata.attributes[2].value}>
-                <div className={Styles.big_img}>
-                    <img src={metadata.image.replace("ipfs://", "https://ipfs.io/ipfs/")} alt="" />
+        <div className={styles.app}>
+            <div className={styles.details} key={metadata.attributes[2].value}>
+                <div className={styles.big_img}>
+                    <img src={metadata.image.replace("ipfs://", "https://ipfs.io/ipfs/")} alt="" className={tokenId != curr ? styles.parent_img_sold : styles.parent_img} />
+                    {tokenId < curr
+                        ? <div className={styles.image_over}><img className={styles.icon_img} src="/sold.png" /></div>
+                        : tokenId > curr
+                            ? <div className={styles.image_over}><img className={styles.icon_img} src="/soon.png" /></div>
+                            : <></>
+                    }
                 </div>
 
-                <div className={Styles.box}>
-                    <div className={Styles.row}>
+                <div className={styles.box}>
+                    <div className={styles.row}>
                         <h3 style={{ color: "red" }}>{ethers.utils.formatEther(highestBid(), "ether")}ETH </h3>
                     </div>
                     <UpdateTx tx={isTransaction} />
 
-                    <button className={Styles.cart} onClick={bidAuctionFunction}
-                        disabled={isLoading || isFetching}>BID</button>
+                    <button className={styles.cart} onClick={bidAuctionFunction}
+                        disabled={isLoading || isFetching || tokenId != curr}>{tokenId < curr ? "SOLD OUT" : "BID"}</button>
 
                 </div>
             </div>
@@ -179,24 +185,34 @@ export async function getServerSideProps(context) {
         chain: EvmChain.SEPOLIA,
         tokenId,
     });
-    
+
     address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS
     let functionName = "getAuctionBid"
-    const res = await Moralis.EvmApi.utils.runContractFunction({
+    let res = await Moralis.EvmApi.utils.runContractFunction({
         abi,
         functionName,
         address,
         chain: EvmChain.SEPOLIA,
-      });
-      const bid = res.result
-      console.log(bid)
+    });
+    const bid = res.result
+
+    functionName = "getCurrentPlayerCount"
+    address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS;
+
+    res = await Moralis.EvmApi.utils.runContractFunction({
+        abi,
+        functionName,
+        address,
+        chain: EvmChain.SEPOLIA,
+    });
+    const curr_auction_player = res.result
 
     return {
         props: {
             metadata: response.result.metadata,
             tokenId: context.params.tokenId,
-            bid: bid
-            // current_player: current_player
+            bid: bid,
+            curr: curr_auction_player
         },
     };
 }

@@ -1,11 +1,9 @@
 import Moralis from 'moralis';
 import { EvmChain } from '@moralisweb3/evm-utils';
-
 import Table from "../components/Table";
-
 const ContractAbi = require("../constants/ContractAbi.json")
 
-export default function registrants({ registrants, numPlayerPurchased, moneyspent, count, playersBought, withdrawableAmount }) {
+export default function registrants({ registrants, numPlayerPurchased, moneyspent, count, playersBought, withdrawableAmount, winner, winnerAmount }) {
     return (
         <>
             <br />
@@ -15,7 +13,9 @@ export default function registrants({ registrants, numPlayerPurchased, moneyspen
                 moneyspent={moneyspent}
                 count={count}
                 playersBought={playersBought}
-                withdrawableAmount={withdrawableAmount} />
+                withdrawableAmount={withdrawableAmount}
+                winner={winner} 
+                winnerAmount={winnerAmount} />
         </>
     )
 }
@@ -73,6 +73,25 @@ export async function getServerSideProps(context) {
         });
         playersBought.push(response.result)
     }
+
+    functionName = "getWinner"
+    response = await Moralis.EvmApi.utils.runContractFunction({
+        abi,
+        functionName,
+        address,
+        chain: EvmChain.SEPOLIA,
+    });
+    let winner = response.result
+
+    // functionName = "getWinnerFunds"
+    // response = await Moralis.EvmApi.utils.runContractFunction({
+    //     abi,
+    //     functionName,
+    //     address,
+    //     chain: EvmChain.SEPOLIA,
+    // });
+    let winnerAmount = 0
+
     abi = JSON.parse(ContractAbi["AuctionHouse"])
     address = process.env.NEXT_PUBLIC_AUCTIONHOUSE_CONTRACT_ADDRESS;
     functionName = "getPendingReturns"
@@ -98,7 +117,9 @@ export async function getServerSideProps(context) {
             moneyspent: moneyspent,
             count: registrants.length,
             playersBought: playersBought,
-            withdrawableAmount: withdrawableAmount
+            withdrawableAmount: withdrawableAmount, 
+            winner: winner,
+            winnerAmount: winnerAmount
         },
     };
 }

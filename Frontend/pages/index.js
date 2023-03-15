@@ -4,11 +4,11 @@ import Card from "../components/Card";
 const ethers = require("ethers")
 const ContractAbi = require("../constants/ContractAbi.json")
 
-export default function IndexPage({ metadata }) {
+export default function IndexPage({ metadata, curr }) {
   return (
     <>
       <br />
-      <Card metadata={metadata} />
+      <Card metadata={metadata} curr={curr}/>
     </>
   )
 }
@@ -63,19 +63,19 @@ export async function getServerSideProps(context) {
     console.log(JSON.stringify(transferEvent, null, 4))
   })
 
-  // functionName = "s_playerCount"
-  // const res = await Moralis.EvmApi.utils.runContractFunction({
-  //   abi,
-  //   functionName,
-  //   address,
-  //   chain: EvmChain.SEPOLIA,
-  // });
-  // const curr_auction_player = res.result
+  functionName = "getCurrentPlayerCount"
+  const res = await Moralis.EvmApi.utils.runContractFunction({
+    abi,
+    functionName,
+    address,
+    chain: EvmChain.SEPOLIA,
+  });
+  const curr_auction_player = res.result
 
   return {
     props: {
       metadata: metadata,
-      // disabled: 0 // use curr_auction_player
+      curr: curr_auction_player
     },
   };
 }

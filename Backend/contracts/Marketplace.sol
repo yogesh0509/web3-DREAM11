@@ -75,12 +75,20 @@ contract Marketplace is
         _;
     }
 
+    modifier onlyWinner() {
+        if (msg.sender != s_winner) {
+            revert SenderIsNotWinner();
+        }
+        _;
+    }
+
     error BuyerAlreadyRegistered();
     error BuyerNotRegistered();
     error AuctionIsOpen();
     error TransferFailed();
     error WrongBid(uint256 bid);
     error FundsAreLocked();
+    error SenderIsNotWinner();
 
     event PlayerBid(uint256 indexed tokenId);
     event BuyerRegistered(address indexed registrant);
@@ -188,11 +196,10 @@ contract Marketplace is
             }
         } else if (
             s_currentplayercount == s_totalplayerCount &&
-            (block.timestamp - s_currentAuctionTime >= s_auctionTime)
+            (block.timestamp - s_currentAuctionTime >= s_auctionTime) &&
+            !s_unlock
         ) {
-            s_currentplayercount++;
             s_currentAuctionTime = block.timestamp;
-
             Chainlink.Request memory request = buildOperatorRequest(
                 stringToBytes32(jobId),
                 this.fulfill.selector
@@ -260,6 +267,10 @@ contract Marketplace is
         return s_BuyerTransactionCount[registrant];
     }
 
+    function getWinnerFunds() public view returns (uint256){
+        return s_winnerFunds[s_winner];
+    }
+
     function moneyspent(address registrant) public view returns (uint256) {
         uint256 sum = 0;
         for (uint256 i = 0; i < s_BuyerTransactionCount[registrant]; i++) {
@@ -279,8 +290,10 @@ contract Marketplace is
         return players;
     }
 
-    function withdrawWinnerFunds() public payable {
-        (bool success, ) = (msg.sender).call{value: s_winnerFunds[msg.sender]}(
+    function withdrawWinnerFunds() public payable checklock onlyWinner{
+        uint256 amount = s_winnerFunds[msg.sender];
+        s_winnerFunds[msg.sender] = 0;
+        (bool success, ) = (msg.sender).call{value: amount}(
             ""
         );
         if (!success) {
