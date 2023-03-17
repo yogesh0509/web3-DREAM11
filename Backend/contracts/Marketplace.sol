@@ -164,7 +164,7 @@ contract Marketplace is
         view
         returns (bool upkeepNeeded, bytes memory /* performData */)
     {
-        if (s_currentplayercount <= s_totalplayerCount) {
+        if (s_currentplayercount <= s_totalplayerCount && !s_unlock) {
             upkeepNeeded = (block.timestamp - s_currentAuctionTime >=
                 s_auctionTime);
         } else {
