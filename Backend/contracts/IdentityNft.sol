@@ -3,7 +3,6 @@ pragma solidity ^0.8.8;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 
 contract IdentityNft is ERC721URIStorage, Ownable{
 
@@ -47,7 +46,7 @@ contract IdentityNft is ERC721URIStorage, Ownable{
         super.transferFrom(from, to, tokenId);
     }
 
-    function updatetokenURI(uint256 tokenId, string memory tokenUri) public{
+    function updatetokenURI(uint256 tokenId, string memory tokenUri) public onlyOwner{
         _setTokenURI(tokenId, tokenUri);
         emit nftupdated(tokenId);
     }
@@ -61,7 +60,7 @@ contract IdentityNft is ERC721URIStorage, Ownable{
         return super.tokenURI(tokenId);
     }
 
-    function getTokenCounter() public view returns (uint256) {
+    function getTokenCounter() external view returns (uint256) {
         return s_tokenCounter;
     }
     

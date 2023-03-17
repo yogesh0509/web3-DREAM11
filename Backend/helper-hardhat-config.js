@@ -19,10 +19,10 @@ const networkConfig = {
         name: "sepolia",
         keepersUpdateInterval: "30",
         callbackGasLimit: "600000", // 500,000 gas
-        IdentityNftAddress: "0xaA32999E6B92e5eC3cE70775fd8DFFB385555726",
-        AuctionHouseAddress: "0x4357AA183961CF8473EC5F09f053DaA21f237b4f",
+        IdentityNftAddress: "0xce1F64f81C1a6679ae67d9218463456f09562007",
+        AuctionHouseAddress: "0x0b0aA501E06b6C393ECF8BEe0430F7B4e30b69CE",
         MockOracleAddress: "0x2b6aC48A4e87F2683A0b537E2F1D47e9A864d63d",
-        jobId: "b3eb8f99a5d74aa48ba208a6fd0e85db",
+        jobId: "2fdb2dc237654893b619bf6ba58e6037",
         LinkTokenAddress: "0x779877A7B0D9E8603169DdbD7836e478b4624789",
     }
 }

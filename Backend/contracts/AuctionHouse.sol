@@ -8,10 +8,10 @@ contract AuctionHouse is Ownable{
     uint256 private s_highestBid;
     uint256 private s_lastTimeStamp;
     address private s_highestBidder;
+    bool public ended = false;
     address private s_marketplace_addr;
 
     mapping(address => uint256) private pendingReturns;
-    bool public ended = false;
 
     event HighestBidIncrease(address bidder, uint256 amount);
     event AuctionEnded(address winner, uint256 amount);
@@ -46,7 +46,7 @@ contract AuctionHouse is Ownable{
         emit AuctionStarted();
     }
 
-    function bid(address bidder) public payable virtual onlyMarketplace{
+    function bid(address bidder) external payable onlyMarketplace{
         if (block.timestamp - s_lastTimeStamp > s_auctionEndTime) {
             revert AuctionHasEnded();
         }

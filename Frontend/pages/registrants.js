@@ -83,14 +83,14 @@ export async function getServerSideProps(context) {
     });
     let winner = response.result
 
-    // functionName = "getWinnerFunds"
-    // response = await Moralis.EvmApi.utils.runContractFunction({
-    //     abi,
-    //     functionName,
-    //     address,
-    //     chain: EvmChain.SEPOLIA,
-    // });
-    let winnerAmount = 0
+    functionName = "getWinnerFunds"
+    response = await Moralis.EvmApi.utils.runContractFunction({
+        abi,
+        functionName,
+        address,
+        chain: EvmChain.SEPOLIA,
+    });
+    let winnerAmount = response.result
 
     abi = JSON.parse(ContractAbi["AuctionHouse"])
     address = process.env.NEXT_PUBLIC_AUCTIONHOUSE_CONTRACT_ADDRESS;

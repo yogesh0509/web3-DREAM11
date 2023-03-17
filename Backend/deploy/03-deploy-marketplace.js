@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 const { verify } = require("../utils/verify")
 
-const AUCTION_TIME = 3600;
+const AUCTION_TIME = 900;
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
