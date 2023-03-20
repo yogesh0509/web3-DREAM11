@@ -25,7 +25,8 @@
   "scripts": {
     "dev": "next dev",
     "start": "next start",
-    "build": "next build"
+    "build": "next build",
+    "lint": "next lint"
   },
   "eslintConfig": {
     "extends": [
@@ -44,5 +45,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "^13.2.4"
   }
 }

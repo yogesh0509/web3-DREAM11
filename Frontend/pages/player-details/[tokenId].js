@@ -42,7 +42,7 @@ export function UpdateTx(props) {
     )
 }
 
-export default function player_details({ metadata, tokenId, bid, curr_auction_player, curr_auction_state }) {
+export default function player_details({ metadata, tokenId, bid, curr_auction_player }) {
 
     const [isTransaction, setTransaction] = useState([])
     const { isWeb3Enabled } = useMoralis();
@@ -226,22 +226,12 @@ export async function getServerSideProps(context) {
     });
     const curr_auction_player = res.result
 
-    functionName = "s_auctionState"
-    res = await Moralis.EvmApi.utils.runContractFunction({
-        abi,
-        functionName,
-        address,
-        chain: EvmChain.SEPOLIA,
-    });
-    const curr_auction_state = res.result
-
     return {
         props: {
             metadata: response.result.metadata,
             tokenId: context.params.tokenId,
             bid: bid,
             curr_auction_player: curr_auction_player,
-            curr_auction_state: curr_auction_state
         },
     };
 }
