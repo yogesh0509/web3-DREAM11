@@ -3,7 +3,7 @@ import { EvmChain } from '@moralisweb3/evm-utils';
 import Table from "../components/Table";
 const ContractAbi = require("../constants/ContractAbi.json")
 
-export default function registrants({ registrants, numPlayerPurchased, moneyspent, count, playersBought, withdrawableAmount, winner, winnerAmount }) {
+export default function Registrants({ registrants, numPlayerPurchased, moneyspent, count, playersBought, withdrawableAmount, winner, winnerAmount }) {
     return (
         <>
             <br />

@@ -42,7 +42,7 @@ export function UpdateTx(props) {
     )
 }
 
-export default function player_details({ metadata, tokenId, bid, curr_auction_player }) {
+export default function Player_details({ metadata, tokenId, bid, curr_auction_player }) {
 
     const [isTransaction, setTransaction] = useState([])
     const { isWeb3Enabled } = useMoralis();
