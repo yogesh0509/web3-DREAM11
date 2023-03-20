@@ -94,3 +94,9 @@
     height: 20vh;
     width: 25vh;
   }
+
+  .countdown {
+    margin-left: 22vh;
+    padding-top: 10vh;
+    color: #ec4848;
+ }

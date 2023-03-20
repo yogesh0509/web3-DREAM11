@@ -22,7 +22,7 @@ const networkConfig = {
         IdentityNftAddress: "0xce1F64f81C1a6679ae67d9218463456f09562007",
         AuctionHouseAddress: "0x0b0aA501E06b6C393ECF8BEe0430F7B4e30b69CE",
         MockOracleAddress: "0x2b6aC48A4e87F2683A0b537E2F1D47e9A864d63d",
-        jobId: "2fdb2dc237654893b619bf6ba58e6037",
+        jobId: "698b2800b68b4ec2a0df56c5a9636b01",
         LinkTokenAddress: "0x779877A7B0D9E8603169DdbD7836e478b4624789",
     }
 }

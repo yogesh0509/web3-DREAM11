@@ -32,9 +32,9 @@ task("upload-file", "uploads the file to nft.storage")
           "description": `This nft is used by the marketplace contract to fetch a player's data`,
           "image": image,
           "attributes": [
-            { "trait_type": "country", "value": "IND" },
+            { "trait_type": "country", "value": "ENG" },
             { "trait_type": "role", "value": "batsman" },
-            { "trait_type": "id", "value": 1413 }
+            { "trait_type": "id", "value": 8019 }
         ],
         });
         responses.push(response);

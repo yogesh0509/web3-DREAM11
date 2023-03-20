@@ -15,6 +15,8 @@
     "moralis": "^2.7.1",
     "next": "^13.0.2",
     "react": "^18.2.0",
+    "react-cookie": "^4.1.1",
+    "react-countdown": "^2.3.5",
     "react-dom": "^18.2.0",
     "react-moralis": "^1.4.2",
     "react-scripts": "5.0.1",

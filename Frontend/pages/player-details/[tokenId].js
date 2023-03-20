@@ -6,7 +6,10 @@ import { useNotification } from "web3uikit";
 import { EvmChain } from '@moralisweb3/evm-utils';
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, child, push, update } from "firebase/database";
-import styles from "./Details.module.css"
+import { useCookies } from 'react-cookie';
+import Typography from '@mui/material/Typography';
+import Countdown from 'react-countdown';
+import styles from "./Player.module.css"
 
 const ContractAbi = require("../../constants/ContractAbi.json")
 
@@ -39,10 +42,12 @@ export function UpdateTx(props) {
     )
 }
 
-export default function player_details({ metadata, tokenId, bid, curr }) {
+export default function player_details({ metadata, tokenId, bid, curr_auction_player, curr_auction_state }) {
 
     const [isTransaction, setTransaction] = useState([])
     const { isWeb3Enabled } = useMoralis();
+    const [cookies, setCookie] = useCookies(['time']);
+    const [cookiesState, setCookieState] = useCookies(['state']);
 
     const dispatch = useNotification();
     const abi = JSON.parse(ContractAbi["Marketplace"])
@@ -111,7 +116,6 @@ export default function player_details({ metadata, tokenId, bid, curr }) {
         const updates = {};
 
         onValue(ref(db, `/${tokenId}`), (snapshot) => {
-            console.log(snapshot.val())
             if (snapshot.val() == null) {
                 updates[tokenId] = [postData]
             }
@@ -147,12 +151,28 @@ export default function player_details({ metadata, tokenId, bid, curr }) {
 
     return (
         <div className={styles.app}>
+            {/* <Typography variant="h6" gutterBottom>
+                Bid in 
+            </Typography> */}
+            {isWeb3Enabled && tokenId == curr_auction_player
+                ? <Countdown
+                    date={parseInt(cookies.time) + 900000}
+                    renderer={props =>
+                        <Typography variant="h3" gutterBottom className={styles.countdown}>
+                            {props.minutes < 10
+                                ? <span>0{props.minutes}</span>
+                                : <span>{props.minutes}</span>}
+                            :{props.seconds < 10
+                                ? <span>0{props.seconds} </span>
+                                : <span>{props.seconds} </span>}
+                        </Typography>} />
+                : <></>}
             <div className={styles.details} key={metadata.attributes[2].value}>
                 <div className={styles.big_img}>
-                    <img src={metadata.image.replace("ipfs://", "https://ipfs.io/ipfs/")} alt="" className={tokenId != curr ? styles.parent_img_sold : styles.parent_img} />
-                    {tokenId < curr
+                    <img src={metadata.image.replace("ipfs://", "https://ipfs.io/ipfs/")} alt="" className={tokenId != curr_auction_player ? styles.parent_img_sold : styles.parent_img} />
+                    {tokenId < curr_auction_player
                         ? <div className={styles.image_over}><img className={styles.icon_img} src="/sold.png" /></div>
-                        : tokenId > curr
+                        : tokenId > curr_auction_player
                             ? <div className={styles.image_over}><img className={styles.icon_img} src="/soon.png" /></div>
                             : <></>
                     }
@@ -163,9 +183,8 @@ export default function player_details({ metadata, tokenId, bid, curr }) {
                         <h3 style={{ color: "red" }}>{ethers.utils.formatEther(highestBid(), "ether")}ETH </h3>
                     </div>
                     <UpdateTx tx={isTransaction} />
-
                     <button className={styles.cart} onClick={bidAuctionFunction}
-                        disabled={isLoading || isFetching || tokenId != curr}>{tokenId < curr ? "SOLD OUT" : "BID"}</button>
+                        disabled={isLoading || isFetching || tokenId != curr_auction_player || cookiesState.state == "true"}>{tokenId < curr_auction_player ? "SOLD OUT" : "BID"}</button>
 
                 </div>
             </div>
@@ -207,12 +226,22 @@ export async function getServerSideProps(context) {
     });
     const curr_auction_player = res.result
 
+    functionName = "s_auctionState"
+    res = await Moralis.EvmApi.utils.runContractFunction({
+        abi,
+        functionName,
+        address,
+        chain: EvmChain.SEPOLIA,
+    });
+    const curr_auction_state = res.result
+
     return {
         props: {
             metadata: response.result.metadata,
             tokenId: context.params.tokenId,
             bid: bid,
-            curr: curr_auction_player
+            curr_auction_player: curr_auction_player,
+            curr_auction_state: curr_auction_state
         },
     };
 }

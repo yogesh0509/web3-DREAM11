@@ -11,9 +11,7 @@ interface I_IdentityNft {
 
 interface I_AuctionHouse {
     function bid(address) external payable;
-
     function start() external;
-
     function auctionEnd(address payable) external returns (address, uint256);
 }
 
@@ -97,6 +95,7 @@ contract Marketplace is
     error WrongBid(uint256 bid);
     error FundsAreLocked();
     error SenderIsNotWinner();
+    error WinnerFundNotReceived();
 
     event PlayerBid(uint256 indexed tokenId);
     event BuyerRegistered(address indexed registrant);
@@ -253,6 +252,18 @@ contract Marketplace is
         return maxTeam;
     }
 
+    function restartAuction() public onlyOwner checklock{
+        if(s_winnerFunds[s_winner] != 0){
+            revert WinnerFundNotReceived();
+        }
+        s_auctionState = false;
+        s_currentAuctionTime = block.timestamp + s_auctionTime;
+        s_currentplayercount = 0;
+        s_unlock = false;
+        s_winner = address(0);
+        s_totalplayerCount = s_nft.getTokenCounter();
+    }
+
     function editJobId(string memory _jobId) public onlyOwner{
         jobId = _jobId;
     }
@@ -364,5 +375,4 @@ contract Marketplace is
     fallback() external payable {}
 
     receive() external payable {}
-    // revert eth sent without any function
 }

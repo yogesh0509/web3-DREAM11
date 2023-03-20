@@ -20,6 +20,10 @@ function fetch(data) {
   return new Promise((resolve, reject) => {
     createRequest(data, (status, result) => {
       if (result.statusCode == 200) {
+        console.log(result.result)
+        if(result.result == null){
+          resolve(101)
+        }
         resolve(parseInt(result.result))
       }
       else{

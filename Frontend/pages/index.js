@@ -1,10 +1,10 @@
 import Moralis from 'moralis';
 import { EvmChain } from '@moralisweb3/evm-utils';
 import Card from "../components/Card";
-const ethers = require("ethers")
 const ContractAbi = require("../constants/ContractAbi.json")
 
 export default function IndexPage({ metadata, curr }) {
+
   return (
     <>
       <br />
@@ -16,7 +16,6 @@ export default function IndexPage({ metadata, curr }) {
 export async function getServerSideProps(context) {
   await Moralis.start({ apiKey: process.env.MORALIS_API_KEY });
 
-  let time = 0;
   let address = process.env.NEXT_PUBLIC_IDENTITYNFT_CONTRACT_ADDRESS;
   let functionName = "getTokenCounter"
   let abi = JSON.parse(ContractAbi["IdentityNft"])
@@ -47,21 +46,6 @@ export async function getServerSideProps(context) {
 
   address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS;
   abi = JSON.parse(ContractAbi["Marketplace"])
-
-  const provider = new ethers.providers.WebSocketProvider(
-    `wss://sepolia.infura.io/ws/v3/${process.env.NEXT_PUBLIC_INFURA_KEY}`
-  );
-  const contract = new ethers.Contract(address, abi, provider);
-  contract.on("AuctionEnded", (from, to, value, event) => {
-    let transferEvent = {
-      from: from,
-      to: to,
-      value: value,
-      eventData: event,
-    }
-    time = 3600
-    console.log(JSON.stringify(transferEvent, null, 4))
-  })
 
   functionName = "getCurrentPlayerCount"
   const res = await Moralis.EvmApi.utils.runContractFunction({

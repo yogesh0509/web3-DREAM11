@@ -8,6 +8,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
     let chainId = network.config.chainId;
+    console.log(chainId)
     let IdentityNftAddress, AuctionHouseAddress, LinkTokenAddress, MockOracleAddress;
 
     const jobId = networkConfig[chainId]["jobId"];
