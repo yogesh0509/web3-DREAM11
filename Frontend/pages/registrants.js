@@ -31,7 +31,7 @@ export async function getServerSideProps(context) {
         abi,
         functionName,
         address,
-        chain: EvmChain.SEPOLIA,
+        chain: EvmChain.MUMBAI,
     });
     const registrants = response.result
     const numPlayerPurchased = []
@@ -47,7 +47,7 @@ export async function getServerSideProps(context) {
             },
             functionName,
             address,
-            chain: EvmChain.SEPOLIA,
+            chain: EvmChain.MUMBAI,
         });
         numPlayerPurchased.push(response.result)
         functionName = "moneyspent"
@@ -58,7 +58,7 @@ export async function getServerSideProps(context) {
             },
             functionName,
             address,
-            chain: EvmChain.SEPOLIA,
+            chain: EvmChain.MUMBAI,
         });
         moneyspent.push(response.result)
         functionName = "fetchPlayers"
@@ -69,7 +69,7 @@ export async function getServerSideProps(context) {
             },
             functionName,
             address,
-            chain: EvmChain.SEPOLIA,
+            chain: EvmChain.MUMBAI,
         });
         playersBought.push(response.result)
     }
@@ -79,7 +79,7 @@ export async function getServerSideProps(context) {
         abi,
         functionName,
         address,
-        chain: EvmChain.SEPOLIA,
+        chain: EvmChain.MUMBAI,
     });
     let winner = response.result
 
@@ -88,7 +88,7 @@ export async function getServerSideProps(context) {
         abi,
         functionName,
         address,
-        chain: EvmChain.SEPOLIA,
+        chain: EvmChain.MUMBAI,
     });
     let winnerAmount = response.result
 
@@ -105,7 +105,7 @@ export async function getServerSideProps(context) {
             },
             functionName,
             address,
-            chain: EvmChain.SEPOLIA,
+            chain: EvmChain.MUMBAI,
         });
         withdrawableAmount.push(response.result)
     }

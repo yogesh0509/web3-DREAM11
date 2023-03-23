@@ -2,7 +2,7 @@ type = "directrequest"
 schemaVersion = 1
 name = "player-bridge"
 maxTaskDuration = "0s"
-contractAddress = "0x2b6aC48A4e87F2683A0b537E2F1D47e9A864d63d"
+contractAddress = "0x9774be70A8f50b88A44e4C2C83E14C5a43364A6f"
 minContractPaymentLinkJuels = "0"
 observationSource = """
     decode_log   [type=ethabidecodelog
@@ -16,6 +16,6 @@ observationSource = """
     encode_tx    [type=ethabiencode
                   abi="fulfillOracleRequest2(bytes32 requestId, uint256 payment, address callbackAddress, bytes4 callbackFunctionId, uint256 expiration, bytes calldata data)"
                   data="{\\"requestId\\": $(decode_log.requestId), \\"payment\\": $(decode_log.payment), \\"callbackAddress\\": $(decode_log.callbackAddr), \\"callbackFunctionId\\": $(decode_log.callbackFunctionId), \\"expiration\\": $(decode_log.cancelExpiration), \\"data\\": $(encode_data)}"]
-    submit_tx    [type=ethtx to="0x2b6aC48A4e87F2683A0b537E2F1D47e9A864d63d" data="$(encode_tx)"]
+    submit_tx    [type=ethtx to="0x9774be70A8f50b88A44e4C2C83E14C5a43364A6f" data="$(encode_tx)"]
     decode_log -> decode_cbor -> fetch -> parse -> encode_data -> encode_tx -> submit_tx
 """

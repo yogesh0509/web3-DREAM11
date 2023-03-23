@@ -5,8 +5,8 @@ const { EvmChain } = require("@moralisweb3/common-evm-utils")
 const ContractAbi = require("./constants/ContractAbi.json")
 require('dotenv').config()
 
-const address = process.env.SEPOLIA_CONTRACT_ADDRESS
-const chain = EvmChain.SEPOLIA
+const address = process.env.MUMBAI_CONTRACT_ADDRESS
+const chain = EvmChain.MUMBAI
 
 // Define custom error scenarios for the API.
 // Return true for the adapter to retry.

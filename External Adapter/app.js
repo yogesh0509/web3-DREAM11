@@ -10,8 +10,8 @@ const bodyParser = require('body-parser')
 const app = express()
 const port = process.env.EA_PORT || 8080
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY
-const address = process.env.SEPOLIA_CONTRACT_ADDRESS
-const chain = EvmChain.SEPOLIA
+const address = process.env.MUMBAI_CONTRACT_ADDRESS
+const chain = EvmChain.MUMBAI
 const abiCoder = ethers.utils.defaultAbiCoder;
 
 app.use(bodyParser.json())

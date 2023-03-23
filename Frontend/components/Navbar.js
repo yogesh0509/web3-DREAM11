@@ -37,7 +37,7 @@ function Navbar() {
     const handleErrorNotification = () => {
         dispatch({
             type: "error",
-            message: "Error!",
+            message: "Either all actions has been completed on an auction is currently processing. Please wait for the current auction to end!",
             title: "Error",
             position: "topR",
         })

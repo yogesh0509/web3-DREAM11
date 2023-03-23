@@ -14,7 +14,7 @@ export default function MyApp({ Component, pageProps }) {
     let address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS;
     let abi = JSON.parse(ContractAbi["Marketplace"])
     const provider = new ethers.providers.WebSocketProvider(
-        `wss://sepolia.infura.io/ws/v3/${process.env.NEXT_PUBLIC_INFURA_KEY}`
+        `wss://young-warmhearted-ensemble.matic-testnet.discover.quiknode.pro/${process.env.NEXT_PUBLIC_INFURA_KEY}/`
     );
     const contract = new ethers.Contract(address, abi, provider);
 

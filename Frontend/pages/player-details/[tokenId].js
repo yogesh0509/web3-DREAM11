@@ -42,7 +42,7 @@ export function UpdateTx(props) {
     )
 }
 
-export default function Player_details({ metadata, tokenId, bid, curr_auction_player }) {
+export default function Player_details({ metadata, tokenId, bid, curr_auction_player, curr_auctionTime }) {
 
     const [isTransaction, setTransaction] = useState([])
     const { isWeb3Enabled } = useMoralis();
@@ -156,7 +156,7 @@ export default function Player_details({ metadata, tokenId, bid, curr_auction_pl
             </Typography> */}
             {isWeb3Enabled && tokenId == curr_auction_player
                 ? <Countdown
-                    date={parseInt(cookies.time) + 900000}
+                    date={parseInt(cookies.time) + curr_auctionTime*1000}
                     renderer={props =>
                         <Typography variant="h3" gutterBottom className={styles.countdown}>
                             {props.minutes < 10
@@ -201,7 +201,7 @@ export async function getServerSideProps(context) {
     let tokenId = context.params.tokenId
     const response = await Moralis.EvmApi.nft.getNFTMetadata({
         address,
-        chain: EvmChain.SEPOLIA,
+        chain: EvmChain.MUMBAI,
         tokenId,
     });
 
@@ -211,7 +211,7 @@ export async function getServerSideProps(context) {
         abi,
         functionName,
         address,
-        chain: EvmChain.SEPOLIA,
+        chain: EvmChain.MUMBAI,
     });
     const bid = res.result
 
@@ -222,9 +222,19 @@ export async function getServerSideProps(context) {
         abi,
         functionName,
         address,
-        chain: EvmChain.SEPOLIA,
+        chain: EvmChain.MUMBAI,
     });
     const curr_auction_player = res.result
+
+    functionName = "s_auctionTime"
+
+    res = await Moralis.EvmApi.utils.runContractFunction({
+        abi,
+        functionName,
+        address,
+        chain: EvmChain.MUMBAI,
+    });
+    const curr_auctionTime = res.result
 
     return {
         props: {
@@ -232,6 +242,7 @@ export async function getServerSideProps(context) {
             tokenId: context.params.tokenId,
             bid: bid,
             curr_auction_player: curr_auction_player,
+            curr_auctionTime: curr_auctionTime
         },
     };
 }

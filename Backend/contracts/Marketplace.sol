@@ -268,6 +268,10 @@ contract Marketplace is
         jobId = _jobId;
     }
 
+    function editAuctionTime(uint256 time) public onlyOwner{
+        s_auctionTime = time;
+    }
+
     function getCurrentPlayerCount() public view returns (uint256) {
         return s_currentplayercount;
     }

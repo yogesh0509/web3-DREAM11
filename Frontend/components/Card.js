@@ -9,7 +9,6 @@ export default function ImgMediaCard({ metadata, curr }) {
     const router = useRouter()
 
     const handleClick = (val) => {
-        console.log(val.id)
         router.push(`/player-details/${val.id}`)
     }
 

@@ -26,7 +26,7 @@ function createData(name, calories, fat, carbs, playersBought) {
   for (let player of playersBought) {
     arr.push({
       date: player[0],
-      customerId: `https://testnets.opensea.io/assets/goerli/0xef48a42d3a8f582adb1af16e3ff65b21aa29b0b6/${player[0]}`,
+      customerId: `https://testnets.opensea.io/assets/mumbai/${process.env.NEXT_PUBLIC_IDENTITYNFT_CONTRACT_ADDRESS}/${player[0]}`,
       amount: player[1]
     })
   }
@@ -178,7 +178,11 @@ function Row(props) {
                       <TableCell component="th" scope="row">
                         {historyRow.date}
                       </TableCell>
-                      <TableCell>{historyRow.customerId}</TableCell>
+                      <TableCell>
+                        <Button variant="outlined" size="small" href={historyRow.customerId} target="_blank">
+                          opensea
+                        </Button>
+                      </TableCell>
                       <TableCell align="right">{ethers.utils.formatEther(historyRow.amount, "ether")} ETH</TableCell>
                     </TableRow>
                   ))}
@@ -195,7 +199,6 @@ function Row(props) {
 
 
 export default function CollapsibleTable(props) {
-  console.log(props)
   const rows = []
   for (let i = 0; i < props.count; i++) {
     rows.push(createData(

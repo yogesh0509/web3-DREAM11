@@ -44,6 +44,15 @@ module.exports = {
       gasPrice: 8000000000
     },
 
+    mumbai: {
+      url: process.env.MUMBAI_URL || "",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      chainId: 80001,
+      gas: 2100000,
+      gasPrice: 8000000000
+    },
+
     localhost: {
       url: "http://localhost:8545",
       chainId: 31337,

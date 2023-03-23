@@ -23,7 +23,7 @@ export async function getServerSideProps(context) {
     abi,
     functionName,
     address,
-    chain: EvmChain.SEPOLIA,
+    chain: EvmChain.MUMBAI,
   });
   const total_players = response.result
   let metadata = []
@@ -33,7 +33,7 @@ export async function getServerSideProps(context) {
     let tokenId = String(i)
     const response = await Moralis.EvmApi.nft.getNFTMetadata({
       address,
-      chain: EvmChain.SEPOLIA,
+      chain: EvmChain.MUMBAI,
       tokenId,
     });
     if (response) {
@@ -52,7 +52,7 @@ export async function getServerSideProps(context) {
     abi,
     functionName,
     address,
-    chain: EvmChain.SEPOLIA,
+    chain: EvmChain.MUMBAI,
   });
   const curr_auction_player = res.result
 
