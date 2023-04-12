@@ -1,11 +1,28 @@
-# AuctionHouse
+#### IdentityNft.sol
+* Soulbound NFT(erc721) contract.
+* Mint NFTs that is used in the [Marketplace](./contracts/Marketplace.sol) contract.
+* Only the owner can mint these NFTs
+* [0xaA32999E6B92e5eC3cE70775fd8DFFB385555726](https://mumbai.polygonscan.com/address/0xaA32999E6B92e5eC3cE70775fd8DFFB385555726)
 
-In total of 3 solidity files have been created for this project and the tests for the same have been written.
+---
 
-The IdentityNft.sol is a soulbound nft contract that can create nfts of players that are auctioned through the Marketplace.sol contract. Only the owner of the Identity.sol contract can mint these nfts for security reasons.
+#### AuctionHouse.sol
+* Contains the complete auction logic which includes bid, withdraw and declaring the winner.
+* Usually interacted by [Marketplace](./contracts/Marketplace.sol) contract.
+* After the auction ends the highest bid amount is transferred to [Marketplace](./contracts/Marketplace.sol) contract.
+* [0x4357AA183961CF8473EC5F09f053DaA21f237b4f](https://mumbai.polygonscan.com/address/0x4357AA183961CF8473EC5F09f053DaA21f237b4f)
 
-The AuctionHouse.sol contract is a simple auction contract that enables user to bid and withdraw money. The auction ends and the highest bid amount is transferred.
+---
 
-The Marketplace.sol contract enables user to register as a buyer. Buyer bids to the AuctionHouse contract through this contract and the player being auctioned (which is a nft) will change after regular interval due to chainlink keepers. After all the players have been bought, chainlink client will call an api which will send the player statistics thus determining the winner registrant.
+#### Marketplace.sol
+* Users can register themselves as buyers after which they can bid for players.
+* All the players that have been minted by the IdentityNft contract will be auctioned.
+* Checkupkeep is used to start and end the auction by chainlink keepers.
+* After all players have been auctioned chainlink oracle sends a request to an external adapter which returns the player data.
+* This data is used to find out the winner.
+* The winner prize pool is 70% of the total funds collected by the contract during the auction phase.
+* [0xeF32743BA20dd5CB89Fdacfaa7fB69187cA51918](https://mumbai.polygonscan.com/address/0xeF32743BA20dd5CB89Fdacfaa7fB69187cA51918)
 
-###### This project is a work in progress and only the IdentityNft.sol contract have been deployed.
+---
+
+##### [Click here](./contributing.md) for contributing guidelines.

@@ -230,7 +230,7 @@ contract Marketplace is
         }
         s_winner = calculateTeamScore();
         s_unlock = true;
-        s_winnerFunds[s_winner] = (9 * address(this).balance) / 10;
+        s_winnerFunds[s_winner] = (7 * address(this).balance) / 10;
     }
 
     function calculateTeamScore() internal returns (address) {
