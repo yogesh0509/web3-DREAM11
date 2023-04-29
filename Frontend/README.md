@@ -1,1 +1,0 @@
-This is the frontend website for our blockchain based [AuctionHouse contract](https://github.com/yogesh0509/AuctionHouse) which will be used to interact with the nfts and announce the winner.

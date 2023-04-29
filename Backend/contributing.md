@@ -11,7 +11,4 @@
 ---
 
 [Click here](https://github.com/yogesh0509/web3-DREAM11/issues) to find existing issues or create a new one.<br>
-Create a new branch and make all your changes there.<br>
-Open a pull request for the existing issues by pushing the new branch.<br>
-Feel free to discuss any doubts regarding the changes before opening a pull request.<br>
 ##### Note: Do not push to the main branch directly!!!
