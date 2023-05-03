@@ -10,9 +10,10 @@ interface I_IdentityNft {
 }
 
 interface I_AuctionHouse {
-    function bid(address) external payable;
-    function start() external;
+    function bid(address, uint256) external;
+    function restartAuction() external;
     function auctionEnd(address payable) external returns (address, uint256);
+    function withdraw() external returns (uint256);
 }
 
 contract Marketplace is
@@ -31,7 +32,7 @@ contract Marketplace is
     uint256 public s_totalplayerCount;
     uint256 private s_currentplayercount;
     uint256 public s_currentAuctionTime;
-    uint256 private s_biddingPrice = 1e15;
+    uint256 private s_biddingPrice = 1;
     uint256 private fee;
 
     string public jobId;
@@ -52,6 +53,7 @@ contract Marketplace is
     mapping(uint256 => uint256) private s_playerScore;
     mapping(address => uint256) private s_TeamScore;
     mapping(address => uint256) private s_winnerFunds;
+    mapping(address => uint256) public s_DreamToken;
 
     modifier registeredBuyer() {
         if (s_buyercheck[msg.sender] == true) {
@@ -88,11 +90,12 @@ contract Marketplace is
         _;
     }
 
+    error IncorrectRegistrationAmount();
     error BuyerAlreadyRegistered();
     error BuyerNotRegistered();
     error AuctionIsOpen();
+    error NotEnoughFunds();
     error TransferFailed();
-    error WrongBid(uint256 bid);
     error FundsAreLocked();
     error SenderIsNotWinner();
     error WinnerFundNotReceived();
@@ -134,25 +137,30 @@ contract Marketplace is
         fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
     }
 
-    function register() public registeredBuyer checkauctionState {
+    function register() public payable registeredBuyer checkauctionState {
+
+        if(msg.value != 1e17){
+            revert IncorrectRegistrationAmount();
+        }
+        s_DreamToken[msg.sender] = 100;
         s_buyercheck[msg.sender] = true;
         s_buyers.push(msg.sender);
         s_totalBuyerCount += 1;
         emit BuyerRegistered(msg.sender);
     }
 
-    function bid() public payable NotRegisteredBuyer {
-        if (msg.value != s_biddingPrice) {
-            revert WrongBid(msg.value);
+    function bid() public NotRegisteredBuyer {
+        if (s_DreamToken[msg.sender] < s_biddingPrice) {
+            revert NotEnoughFunds();
         }
-        s_AuctionHouseContract.bid{value: msg.value}(msg.sender);
+        s_AuctionHouseContract.bid(msg.sender, s_biddingPrice);
 
         emit PlayerBid(s_currentplayercount);
 
-        if (s_biddingPrice >= 1e18) {
-            s_biddingPrice += 5e17;
+        if (s_biddingPrice >= 10) {
+            s_biddingPrice += 5;
         } else {
-            s_biddingPrice += 5e14;
+            s_biddingPrice += 2;
         }
     }
 
@@ -180,7 +188,7 @@ contract Marketplace is
             ) {
                 s_auctionState = true;
                 s_currentAuctionTime = block.timestamp;
-                s_AuctionHouseContract.start();
+                s_AuctionHouseContract.restartAuction();
                 emit AuctionStarted(s_currentplayercount);
             } else if (
                 (block.timestamp - s_currentAuctionTime >= s_auctionTime) &&
@@ -194,7 +202,7 @@ contract Marketplace is
                 ) = s_AuctionHouseContract.auctionEnd(payable(address(this)));
                 emit AuctionEnded(s_highestBidder, s_highestBid);
 
-                s_biddingPrice = 1e15;
+                s_biddingPrice = 1;
                 s_BuyerTransactions[s_highestBidder][
                     s_BuyerTransactionCount[s_highestBidder]
                 ] = playerBought(s_currentplayercount, s_highestBid);
@@ -252,18 +260,6 @@ contract Marketplace is
         return maxTeam;
     }
 
-    function restartAuction() public onlyOwner checklock{
-        if(s_winnerFunds[s_winner] != 0){
-            revert WinnerFundNotReceived();
-        }
-        s_auctionState = false;
-        s_currentAuctionTime = block.timestamp + s_auctionTime;
-        s_currentplayercount = 0;
-        s_unlock = false;
-        s_winner = address(0);
-        s_totalplayerCount = s_nft.getTokenCounter();
-    }
-
     function editJobId(string memory _jobId) public onlyOwner{
         jobId = _jobId;
     }
@@ -319,6 +315,20 @@ contract Marketplace is
             players[i] = s_BuyerTransactions[registrant][i];
         }
         return players;
+    }
+
+    function withdrawDreamToken() public {
+        uint256 amount = s_AuctionHouseContract.withdraw();
+        s_DreamToken[msg.sender] += amount;
+    }
+
+    function convertTokenToEth() public payable checklock{
+        uint256 amount = s_DreamToken[msg.sender];
+        s_DreamToken[msg.sender] = 0;
+        (bool success, ) = (msg.sender).call{value: amount*1e15}("");
+        if (!success) {
+            revert TransferFailed();
+        }
     }
 
     function withdrawWinnerFunds() public payable checklock onlyWinner {

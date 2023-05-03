@@ -35,7 +35,7 @@ contract AuctionHouse is Ownable{
         s_auctionEndTime = _biddingTime;
     }
 
-    function start() external onlyMarketplace{
+    function restartAuction() external onlyMarketplace{
         if (block.timestamp - s_lastTimeStamp < s_auctionEndTime) {
             revert AuctionNotEnded();
         }
@@ -46,12 +46,12 @@ contract AuctionHouse is Ownable{
         emit AuctionStarted();
     }
 
-    function bid(address bidder) external payable onlyMarketplace{
+    function bid(address bidder, uint256 _bid) external onlyMarketplace{
         if (block.timestamp - s_lastTimeStamp > s_auctionEndTime) {
             revert AuctionHasEnded();
         }
 
-        if (msg.value <= s_highestBid) {
+        if (_bid <= s_highestBid) {
             revert NeedHigherBid(s_highestBid);
         }
 
@@ -60,23 +60,20 @@ contract AuctionHouse is Ownable{
         }
 
         s_highestBidder = bidder;
-        s_highestBid = msg.value;
+        s_highestBid = _bid;
         emit HighestBidIncrease(s_highestBidder, s_highestBid);
     }
 
-    function withdraw() public {
-        uint256 amount = pendingReturns[msg.sender];
+    function withdraw() external onlyMarketplace returns(uint256 amount){
+        amount = pendingReturns[msg.sender];
 
         if (amount > 0) {
             pendingReturns[msg.sender] = 0;
-            (bool success, ) = (msg.sender).call{value: amount}("");
-            if (!success) {
-                revert TransferFailed();
-            }
+            return amount;
         }
     }
 
-    function auctionEnd(address payable _beneficiary) external onlyMarketplace returns(address, uint256){
+    function auctionEnd() external onlyMarketplace returns(address, uint256){
         if (block.timestamp - s_lastTimeStamp < s_auctionEndTime) {
             revert AuctionNotEnded();
         }
@@ -85,10 +82,6 @@ contract AuctionHouse is Ownable{
         }
         ended = true;
         emit AuctionEnded(s_highestBidder, s_highestBid);
-        (bool success, ) = (_beneficiary).call{value: s_highestBid}("");
-        if (!success) {
-            revert TransferFailed();
-        }
         return (getHighestBidder(), getHighestBid());
     }
 
