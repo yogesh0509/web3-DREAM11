@@ -9,30 +9,30 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts()
     let chainId = network.config.chainId;
     console.log(chainId)
-    let IdentityNftAddress, AuctionHouseAddress, LinkTokenAddress, MockOracleAddress;
+    let PICAddress, AuctionHouseAddress, LinkTokenAddress, MockOracleAddress;
 
     const jobId = networkConfig[chainId]["jobId"];
 
     if (developmentChains.includes(network.name)) {
 
-        const IdentityNft = await ethers.getContract("IdentityNft");
+        const PIC = await ethers.getContract("PIC");
         const AuctionHouse = await ethers.getContract("AuctionHouse");
         const linkToken = await ethers.getContract("LinkToken");
         const MockOracle = await ethers.getContract("MockOracle");
 
-        IdentityNftAddress = IdentityNft.address
+        PICAddress = PIC.address
         AuctionHouseAddress = AuctionHouse.address
         LinkTokenAddress = linkToken.address
         MockOracleAddress = MockOracle.address
     }
     else {
-        IdentityNftAddress = networkConfig[chainId]["IdentityNftAddress"];
+        PICAddress = networkConfig[chainId]["PICAddress"];
         AuctionHouseAddress = networkConfig[chainId]["AuctionHouseAddress"];
         MockOracleAddress = networkConfig[chainId]["MockOracleAddress"];
         LinkTokenAddress = networkConfig[chainId]["LinkTokenAddress"];
     }
 
-    const arguments = [IdentityNftAddress, AuctionHouseAddress, AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress]
+    const arguments = [PICAddress, AuctionHouseAddress, AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress]
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6

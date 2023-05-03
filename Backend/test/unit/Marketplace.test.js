@@ -11,7 +11,7 @@ const AUCTION_TIME = 900;
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("marketplace unit tests", () => {
-        let MarketplaceContract, Marketplace, oracleContract,AuctionHouseContract, oracle, linkContract, link, IdentityNftContract, IdentityNft, AuctionHouse
+        let MarketplaceContract, Marketplace, oracleContract,AuctionHouseContract, oracle, linkContract, link, PICContract, PIC, AuctionHouse
 
         beforeEach(async () => {
             accounts = await ethers.getSigners()
@@ -19,16 +19,16 @@ const AUCTION_TIME = 900;
             MarketplaceContract = await ethers.getContract("Marketplace")
             oracleContract = await ethers.getContract("MockOracle")
             linkContract = await ethers.getContract("LinkToken")
-            IdentityNftContract = await ethers.getContract("IdentityNft")
+            PICContract = await ethers.getContract("PIC")
             AuctionHouseContract = await ethers.getContract("AuctionHouse")
 
             Marketplace = MarketplaceContract.connect(accounts[0])
             oracle = oracleContract.connect(accounts[0])
             link = linkContract.connect(accounts[0])
-            IdentityNft = IdentityNftContract.connect(accounts[0])
+            PIC = PICContract.connect(accounts[0])
             AuctionHouse = AuctionHouseContract.connect(accounts[0])
 
-            await IdentityNft.mintNft(tokenUri);
+            await PIC.mintNft(tokenUri);
             await AuctionHouse.putMarketplace(Marketplace.address)
 
         })
@@ -202,7 +202,7 @@ const AUCTION_TIME = 900;
             })
             it("return team score and winner", async () => {
 
-                await IdentityNft.mintNft(tokenUri)
+                await PIC.mintNft(tokenUri)
                 await Marketplace.register()
                 await link.transfer(Marketplace.address, payment)
 

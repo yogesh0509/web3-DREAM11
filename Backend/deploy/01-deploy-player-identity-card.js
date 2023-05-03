@@ -9,7 +9,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6
-    const IdentityNft = await deploy("IdentityNft", {
+    const PIC = await deploy("PIC", {
         from: deployer,
         args: arguments,
         log: true,
@@ -18,8 +18,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
         log("Verifying...")
-        await verify(IdentityNft.address, arguments)
+        await verify(PIC.address, arguments)
     }
 }
 
-module.exports.tags = ["all", "identitynft", "main"]
+module.exports.tags = ["all", "PIC", "main"]

@@ -5,7 +5,7 @@ import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-interface I_IdentityNft {
+interface I_PIC {
     function getTokenCounter() external view returns (uint256);
 }
 
@@ -42,7 +42,7 @@ contract Marketplace is
     address public oracle;
 
     I_AuctionHouse private s_AuctionHouseContract;
-    I_IdentityNft private s_nft;
+    I_PIC private s_nft;
 
     address[] public s_buyers;
 
@@ -119,7 +119,7 @@ contract Marketplace is
         string memory _jobId,
         address _link
     ) {
-        s_nft = I_IdentityNft(_addr1);
+        s_nft = I_PIC(_addr1);
         s_AuctionHouseContract = I_AuctionHouse(_addr2);
         s_totalplayerCount = s_nft.getTokenCounter();
         s_auctionState = false;
