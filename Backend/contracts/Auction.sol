@@ -9,7 +9,6 @@ contract Auction is Ownable{
     uint256 private s_lastTimeStamp;
     address private s_highestBidder;
     bool public ended = false;
-    address private s_marketplace_addr;
 
     mapping(address => uint256) private pendingReturns;
 
@@ -24,18 +23,11 @@ contract Auction is Ownable{
     error TransferFailed();
     error InvalidCall();
 
-    modifier onlyMarketplace() {
-        if (msg.sender != s_marketplace_addr) {
-            revert InvalidCall();
-        }
-        _;
-    }
-
     constructor(uint256 _biddingTime) {
         s_auctionEndTime = _biddingTime;
     }
 
-    function restartAuction() external onlyMarketplace{
+    function restartAuction() external onlyOwner{
         if (block.timestamp - s_lastTimeStamp < s_auctionEndTime) {
             revert AuctionNotEnded();
         }
@@ -46,7 +38,7 @@ contract Auction is Ownable{
         emit AuctionStarted();
     }
 
-    function bid(address bidder, uint256 _bid) external onlyMarketplace{
+    function bid(address bidder, uint256 _bid) external onlyOwner{
         if (block.timestamp - s_lastTimeStamp > s_auctionEndTime) {
             revert AuctionHasEnded();
         }
@@ -64,7 +56,7 @@ contract Auction is Ownable{
         emit HighestBidIncrease(s_highestBidder, s_highestBid);
     }
 
-    function withdraw() external onlyMarketplace returns(uint256 amount){
+    function withdraw() external onlyOwner returns(uint256 amount){
         amount = pendingReturns[msg.sender];
 
         if (amount > 0) {
@@ -73,7 +65,7 @@ contract Auction is Ownable{
         }
     }
 
-    function auctionEnd() external onlyMarketplace returns(address, uint256){
+    function auctionEnd() external onlyOwner returns(address, uint256){
         if (block.timestamp - s_lastTimeStamp < s_auctionEndTime) {
             revert AuctionNotEnded();
         }
@@ -83,10 +75,6 @@ contract Auction is Ownable{
         ended = true;
         emit AuctionEnded(s_highestBidder, s_highestBid);
         return (getHighestBidder(), getHighestBid());
-    }
-
-    function putMarketplace(address marketplace_addr) public onlyOwner{
-        s_marketplace_addr = marketplace_addr;
     }
 
     function getPendingReturns(address player) public view returns (uint256) {

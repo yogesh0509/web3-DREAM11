@@ -3,24 +3,11 @@ pragma solidity ^0.8.8;
 
 import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-interface I_PIC {
-    function getTokenCounter() external view returns (uint256);
-}
+import "./Auction.sol";
+import "./PIC.sol";
 
-interface I_Auction {
-    function bid(address, uint256) external;
-    function restartAuction() external;
-    function auctionEnd(address payable) external returns (address, uint256);
-    function withdraw() external returns (uint256);
-}
-
-contract Game is
-    Ownable,
-    ChainlinkClient,
-    AutomationCompatibleInterface
-{
+contract Game is ChainlinkClient, AutomationCompatibleInterface {
     using Chainlink for Chainlink.Request;
     struct playerBought {
         uint256 tokenId;
@@ -40,9 +27,10 @@ contract Game is
     bool public s_auctionState;
     bool public s_unlock = false;
     address public oracle;
+    address private owner;
 
-    I_Auction private s_AuctionContract;
-    I_PIC private s_nft;
+    Auction public s_AuctionContract;
+    PIC public s_player;
 
     address[] public s_buyers;
 
@@ -90,6 +78,14 @@ contract Game is
         _;
     }
 
+    modifier onlyOwner(){
+        if(msg.sender != owner){
+            revert NotOwner();
+        }
+        _;
+    }
+
+    error NotOwner();
     error IncorrectRegistrationAmount();
     error BuyerAlreadyRegistered();
     error BuyerNotRegistered();
@@ -112,16 +108,14 @@ contract Game is
     );
 
     constructor(
-        address payable _addr1,
-        address payable _addr2,
         uint256 time,
         address _oracle,
         string memory _jobId,
         address _link
     ) {
-        s_nft = I_PIC(_addr1);
-        s_AuctionContract = I_Auction(_addr2);
-        s_totalplayerCount = s_nft.getTokenCounter();
+        s_player = new PIC();
+        s_AuctionContract = new Auction(time);
+        s_totalplayerCount = s_player.getTokenCounter();
         s_auctionState = false;
         s_auctionTime = time;
         s_currentAuctionTime = block.timestamp + s_auctionTime;
@@ -134,12 +128,11 @@ contract Game is
 
         oracle = _oracle;
         jobId = _jobId;
-        fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
+        fee = (1 * LINK_DIVISIBILITY) / 10;
     }
 
     function register() public payable registeredBuyer checkauctionState {
-
-        if(msg.value != 1e17){
+        if (msg.value != 1e17) {
             revert IncorrectRegistrationAmount();
         }
         s_DreamToken[msg.sender] = 100;
@@ -164,6 +157,10 @@ contract Game is
         }
     }
 
+    // ------------------------------------------------------------------------------------------------------
+    //                                          CHAINLINK FUNCTIONS
+    // ------------------------------------------------------------------------------------------------------
+
     function checkUpkeep(
         bytes memory /* checkData */
     )
@@ -180,7 +177,7 @@ contract Game is
     }
 
     function performUpkeep(bytes calldata /*performData*/) external {
-        s_totalplayerCount = s_nft.getTokenCounter();
+        s_totalplayerCount = s_player.getTokenCounter();
         if (s_currentplayercount < s_totalplayerCount) {
             if (
                 (block.timestamp - s_currentAuctionTime >= s_auctionTime) &&
@@ -199,7 +196,7 @@ contract Game is
                 (
                     address s_highestBidder,
                     uint256 s_highestBid
-                ) = s_AuctionContract.auctionEnd(payable(address(this)));
+                ) = s_AuctionContract.auctionEnd();
                 emit AuctionEnded(s_highestBidder, s_highestBid);
 
                 s_biddingPrice = 1;
@@ -227,7 +224,6 @@ contract Game is
         bytes32 requestId,
         bytes memory _score
     ) public recordChainlinkFulfillment(requestId) {
-
         emit RequestFulfilled(requestId);
 
         uint256[] memory s_score;
@@ -241,6 +237,40 @@ contract Game is
         s_winnerFunds[s_winner] = (7 * address(this).balance) / 10;
     }
 
+    function editJobId(string memory _jobId) public onlyOwner {
+        jobId = _jobId;
+    }
+
+    function getChainlinkToken() public view returns (address) {
+        return chainlinkTokenAddress();
+    }
+
+    function withdrawLink() public onlyOwner {
+        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
+        require(
+            link.transfer(msg.sender, link.balanceOf(address(this))),
+            "Unable to transfer Link"
+        );
+    }
+
+    function stringToBytes32(
+        string memory source
+    ) private pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+
+        assembly {
+            // solhint-disable-line no-inline-assembly
+            result := mload(add(source, 32))
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------------------
+    //                                          RESULT CALCULATOR AND WITHDRAWLS
+    // ------------------------------------------------------------------------------------------------------
+
     function calculateTeamScore() internal returns (address) {
         address maxTeam;
         uint256 maxScore;
@@ -249,7 +279,7 @@ contract Game is
             uint256 result;
             for (uint256 j = 0; j < s_BuyerTransactionCount[Team]; j++) {
                 uint256 id = s_BuyerTransactions[Team][j].tokenId;
-                result += (100 - s_playerScore[id] + 1)/10;
+                result += (100 - s_playerScore[id] + 1) / 10;
             }
             s_TeamScore[Team] = result;
             if (result > maxScore) {
@@ -260,12 +290,57 @@ contract Game is
         return maxTeam;
     }
 
-    function editJobId(string memory _jobId) public onlyOwner{
-        jobId = _jobId;
+    function withdrawDreamToken() public {
+        uint256 amount = s_AuctionContract.withdraw();
+        s_DreamToken[msg.sender] += amount;
     }
 
-    function editAuctionTime(uint256 time) public onlyOwner{
-        s_auctionTime = time;
+    function convertTokenToEth() public payable checklock {
+        uint256 amount = s_DreamToken[msg.sender];
+        s_DreamToken[msg.sender] = 0;
+        (bool success, ) = (msg.sender).call{value: amount * 1e15}("");
+        if (!success) {
+            revert TransferFailed();
+        }
+    }
+
+    function withdrawWinnerFunds() public payable checklock onlyWinner {
+        uint256 amount = s_winnerFunds[msg.sender];
+        s_winnerFunds[msg.sender] = 0;
+        (bool success, ) = (msg.sender).call{value: amount}("");
+        if (!success) {
+            revert TransferFailed();
+        }
+    }
+
+    function withdrawFunds() public payable onlyOwner checklock {
+        (bool success, ) = (msg.sender).call{value: address(this).balance}("");
+        if (!success) {
+            revert TransferFailed();
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------------------
+    //                                          STATE VARIABLES
+    // ------------------------------------------------------------------------------------------------------
+
+    function moneyspent(address registrant) public view returns (uint256) {
+        uint256 sum = 0;
+        for (uint256 i = 0; i < s_BuyerTransactionCount[registrant]; i++) {
+            sum += s_BuyerTransactions[registrant][i].price;
+        }
+        return sum;
+    }
+
+    function fetchPlayers(
+        address registrant
+    ) public view returns (playerBought[] memory) {
+        uint256 count = s_BuyerTransactionCount[registrant];
+        playerBought[] memory players = new playerBought[](count);
+        for (uint256 i = 0; i < count; i++) {
+            players[i] = s_BuyerTransactions[registrant][i];
+        }
+        return players;
     }
 
     function getCurrentPlayerCount() public view returns (uint256) {
@@ -298,55 +373,6 @@ contract Game is
         return s_winnerFunds[s_winner];
     }
 
-    function moneyspent(address registrant) public view returns (uint256) {
-        uint256 sum = 0;
-        for (uint256 i = 0; i < s_BuyerTransactionCount[registrant]; i++) {
-            sum += s_BuyerTransactions[registrant][i].price;
-        }
-        return sum;
-    }
-
-    function fetchPlayers(
-        address registrant
-    ) public view returns (playerBought[] memory) {
-        uint256 count = s_BuyerTransactionCount[registrant];
-        playerBought[] memory players = new playerBought[](count);
-        for (uint256 i = 0; i < count; i++) {
-            players[i] = s_BuyerTransactions[registrant][i];
-        }
-        return players;
-    }
-
-    function withdrawDreamToken() public {
-        uint256 amount = s_AuctionContract.withdraw();
-        s_DreamToken[msg.sender] += amount;
-    }
-
-    function convertTokenToEth() public payable checklock{
-        uint256 amount = s_DreamToken[msg.sender];
-        s_DreamToken[msg.sender] = 0;
-        (bool success, ) = (msg.sender).call{value: amount*1e15}("");
-        if (!success) {
-            revert TransferFailed();
-        }
-    }
-
-    function withdrawWinnerFunds() public payable checklock onlyWinner {
-        uint256 amount = s_winnerFunds[msg.sender];
-        s_winnerFunds[msg.sender] = 0;
-        (bool success, ) = (msg.sender).call{value: amount}("");
-        if (!success) {
-            revert TransferFailed();
-        }
-    }
-
-    function withdrawEth() public payable onlyOwner checklock {
-        (bool success, ) = (msg.sender).call{value: address(this).balance}("");
-        if (!success) {
-            revert TransferFailed();
-        }
-    }
-
     function contractBalances()
         public
         view
@@ -360,33 +386,6 @@ contract Game is
         link = linkContract.balanceOf(address(this));
     }
 
-    function getChainlinkToken() public view returns (address) {
-        return chainlinkTokenAddress();
-    }
-
-    function withdrawLink() public onlyOwner {
-        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-        require(
-            link.transfer(msg.sender, link.balanceOf(address(this))),
-            "Unable to transfer Link"
-        );
-    }
-
-    function stringToBytes32(
-        string memory source
-    ) private pure returns (bytes32 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-
-        assembly {
-            // solhint-disable-line no-inline-assembly
-            result := mload(add(source, 32))
-        }
-    }
-
     fallback() external payable {}
-
     receive() external payable {}
 }

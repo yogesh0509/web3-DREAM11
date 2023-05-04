@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract PIC is Ownable{
+contract PIC{
 
     struct Player{
         string imageURI;
@@ -11,13 +9,24 @@ contract PIC is Ownable{
         uint256 id;
     }
     uint256 private s_tokenCounter;
+    address private owner;
     Player[] s_PlayerStorage;
 
     event PlayerCreated(uint256 indexed tokenId);
     event PlayerUpdated(uint256 indexed tokenId);
 
+    error NotOwner();
+
+    modifier onlyOwner(){
+        if(msg.sender != owner){
+            revert NotOwner();
+        }
+        _;
+    }
+
     constructor(){
         s_tokenCounter = 0;
+        owner = tx.origin;
     }
 
     function mintPlayer(string memory _imageURI, string memory _role, uint256 _id) public onlyOwner{
@@ -41,6 +50,14 @@ contract PIC is Ownable{
         returns (string memory)
     {
         return s_PlayerStorage[tokenId].imageURI;
+    }
+
+    function playerDetails(uint256 tokenId)
+        public
+        view
+        returns (Player memory)
+    {
+        return s_PlayerStorage[tokenId];
     }
 
     function getTokenCounter() external view returns (uint256) {
