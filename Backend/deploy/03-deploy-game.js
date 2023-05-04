@@ -9,34 +9,34 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts()
     let chainId = network.config.chainId;
     console.log(chainId)
-    let PICAddress, AuctionHouseAddress, LinkTokenAddress, MockOracleAddress;
+    let PICAddress, AuctionAddress, LinkTokenAddress, MockOracleAddress;
 
     const jobId = networkConfig[chainId]["jobId"];
 
     if (developmentChains.includes(network.name)) {
 
         const PIC = await ethers.getContract("PIC");
-        const AuctionHouse = await ethers.getContract("AuctionHouse");
+        const Auction = await ethers.getContract("Auction");
         const linkToken = await ethers.getContract("LinkToken");
         const MockOracle = await ethers.getContract("MockOracle");
 
         PICAddress = PIC.address
-        AuctionHouseAddress = AuctionHouse.address
+        AuctionAddress = Auction.address
         LinkTokenAddress = linkToken.address
         MockOracleAddress = MockOracle.address
     }
     else {
         PICAddress = networkConfig[chainId]["PICAddress"];
-        AuctionHouseAddress = networkConfig[chainId]["AuctionHouseAddress"];
+        AuctionAddress = networkConfig[chainId]["AuctionAddress"];
         MockOracleAddress = networkConfig[chainId]["MockOracleAddress"];
         LinkTokenAddress = networkConfig[chainId]["LinkTokenAddress"];
     }
 
-    const arguments = [PICAddress, AuctionHouseAddress, AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress]
+    const arguments = [PICAddress, AuctionAddress, AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress]
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6
-    const Marketplace = await deploy("Marketplace", {
+    const Game = await deploy("Game", {
         from: deployer,
         args: arguments,
         log: true,
@@ -45,8 +45,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
         log("Verifying...")
-        await verify(Marketplace.address, arguments)
+        await verify(Game.address, arguments)
     }
 }
 
-module.exports.tags = ["all", "marketplace", "master"]
+module.exports.tags = ["all", "Game", "master"]

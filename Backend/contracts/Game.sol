@@ -9,14 +9,14 @@ interface I_PIC {
     function getTokenCounter() external view returns (uint256);
 }
 
-interface I_AuctionHouse {
+interface I_Auction {
     function bid(address, uint256) external;
     function restartAuction() external;
     function auctionEnd(address payable) external returns (address, uint256);
     function withdraw() external returns (uint256);
 }
 
-contract Marketplace is
+contract Game is
     Ownable,
     ChainlinkClient,
     AutomationCompatibleInterface
@@ -41,7 +41,7 @@ contract Marketplace is
     bool public s_unlock = false;
     address public oracle;
 
-    I_AuctionHouse private s_AuctionHouseContract;
+    I_Auction private s_AuctionContract;
     I_PIC private s_nft;
 
     address[] public s_buyers;
@@ -120,7 +120,7 @@ contract Marketplace is
         address _link
     ) {
         s_nft = I_PIC(_addr1);
-        s_AuctionHouseContract = I_AuctionHouse(_addr2);
+        s_AuctionContract = I_Auction(_addr2);
         s_totalplayerCount = s_nft.getTokenCounter();
         s_auctionState = false;
         s_auctionTime = time;
@@ -153,7 +153,7 @@ contract Marketplace is
         if (s_DreamToken[msg.sender] < s_biddingPrice) {
             revert NotEnoughFunds();
         }
-        s_AuctionHouseContract.bid(msg.sender, s_biddingPrice);
+        s_AuctionContract.bid(msg.sender, s_biddingPrice);
 
         emit PlayerBid(s_currentplayercount);
 
@@ -188,7 +188,7 @@ contract Marketplace is
             ) {
                 s_auctionState = true;
                 s_currentAuctionTime = block.timestamp;
-                s_AuctionHouseContract.restartAuction();
+                s_AuctionContract.restartAuction();
                 emit AuctionStarted(s_currentplayercount);
             } else if (
                 (block.timestamp - s_currentAuctionTime >= s_auctionTime) &&
@@ -199,7 +199,7 @@ contract Marketplace is
                 (
                     address s_highestBidder,
                     uint256 s_highestBid
-                ) = s_AuctionHouseContract.auctionEnd(payable(address(this)));
+                ) = s_AuctionContract.auctionEnd(payable(address(this)));
                 emit AuctionEnded(s_highestBidder, s_highestBid);
 
                 s_biddingPrice = 1;
@@ -318,7 +318,7 @@ contract Marketplace is
     }
 
     function withdrawDreamToken() public {
-        uint256 amount = s_AuctionHouseContract.withdraw();
+        uint256 amount = s_AuctionContract.withdraw();
         s_DreamToken[msg.sender] += amount;
     }
 

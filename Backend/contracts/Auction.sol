@@ -3,7 +3,7 @@ pragma solidity ^0.8.8;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract AuctionHouse is Ownable{
+contract Auction is Ownable{
     uint256 private s_auctionEndTime;
     uint256 private s_highestBid;
     uint256 private s_lastTimeStamp;

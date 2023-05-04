@@ -11,7 +11,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6
-    const AuctionHouse = await deploy("AuctionHouse", {
+    const Auction = await deploy("Auction", {
         from: deployer,
         args: arguments,
         log: true,
@@ -20,8 +20,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
         log("Verifying...")
-        await verify(AuctionHouse.address, arguments)
+        await verify(Auction.address, arguments)
     }
 }
 
-module.exports.tags = ["all", "auctionhouse", "main"]
+module.exports.tags = ["all", "Auction", "main"]
