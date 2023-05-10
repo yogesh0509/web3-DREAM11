@@ -14,25 +14,19 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const jobId = networkConfig[chainId]["jobId"];
 
     if (developmentChains.includes(network.name)) {
-
-        const PIC = await ethers.getContract("PIC");
-        const Auction = await ethers.getContract("Auction");
+        
         const linkToken = await ethers.getContract("LinkToken");
         const MockOracle = await ethers.getContract("MockOracle");
 
-        PICAddress = PIC.address
-        AuctionAddress = Auction.address
         LinkTokenAddress = linkToken.address
         MockOracleAddress = MockOracle.address
     }
     else {
-        PICAddress = networkConfig[chainId]["PICAddress"];
-        AuctionAddress = networkConfig[chainId]["AuctionAddress"];
         MockOracleAddress = networkConfig[chainId]["MockOracleAddress"];
         LinkTokenAddress = networkConfig[chainId]["LinkTokenAddress"];
     }
 
-    const arguments = [PICAddress, AuctionAddress, AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress]
+    const arguments = [AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress]
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6

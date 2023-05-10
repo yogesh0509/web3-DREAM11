@@ -5,13 +5,13 @@ const { developmentChains } = require("../../helper-hardhat-config");
 const tokenUri = "ipfs://bafyreiflh4wjd2shgk2kguff5gl5uv6ifpdszfgfep2itve3tdzqugx7mu/metadata.json";
 const payment = '3000000000000000000'
 const callbackValue = "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000004"
-const bid = 1e15
-const AUCTION_TIME = 900;
+const bid = ethers.utils.parseEther("0.1")
+const AUCTION_TIME = 300;
 
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("Game unit tests", () => {
-        let GameContract, Game, oracleContract,AuctionContract, oracle, linkContract, link, PICContract, PIC, Auction
+        let GameContract, Game, oracleContract, AuctionContract, oracle, linkContract, link, PICContract, PIC, Auction
 
         beforeEach(async () => {
             accounts = await ethers.getSigners()
@@ -20,49 +20,46 @@ const AUCTION_TIME = 900;
             oracleContract = await ethers.getContract("MockOracle")
             linkContract = await ethers.getContract("LinkToken")
             PICContract = await ethers.getContract("PIC")
-            AuctionContract = await ethers.getContract("Auction")
+            // AuctionContract = await ethers.getContract("Auction")
 
             Game = GameContract.connect(accounts[0])
             oracle = oracleContract.connect(accounts[0])
             link = linkContract.connect(accounts[0])
-            PIC = PICContract.connect(accounts[0])
-            Auction = AuctionContract.connect(accounts[0])
-
-            await PIC.mintNft(tokenUri);
-            await Auction.putGame(Game.address)
-
+            PIC = PICContract(await Game.getPICContract())
+            await PIC.mintPlayer(tokenUri, "batsman", 1);
         })
 
-        describe("checking constructor", () => {
+        describe("constructor", () => {
             it("initial auction state", async () => {
                 assert.equal((await Game.s_auctionState()).toString(), "false")
             })
 
             it("check current player count", async () => {
-                // We have minted a nft before deployment of Game contract. 
-                // check deploy scripts....
                 assert.equal((await Game.s_totalplayerCount()).toString(), "0")
             })
         })
 
-        describe("check when start auction is triggered", () => {
+        describe("start auction trigger", () => {
 
             it("reverts if buyer has not registered", async () => {
-                await expect(Game.bid({value: bid})).to.be.revertedWith("BuyerNotRegistered")
+                await expect(Game.bid()).to.be.revertedWith("BuyerNotRegistered")
             })
 
             it("reverts if auction has not started", async () => {
-                await Game.register()
-                await expect(Game.bid({value: bid})).to.be.revertedWith("AuctionHasEnded")
+                await Game.register({value: bid})
+                await expect(Game.bid()).to.be.revertedWith("AuctionHasEnded")
             })
 
             it("auction will be started if enough time has passed", async () => {
-
                 await network.provider.send("evm_increaseTime", [2*AUCTION_TIME])
                 await network.provider.request({ method: "evm_mine", params: [] })
                 // This will trigger the start auction function.
                 await expect(Game.performUpkeep([])).to.emit(Game, "AuctionStarted");
+                console.log("time passed")
+
                 assert.equal((await Game.s_auctionState()).toString(), "true")
+                console.log("time passed")
+
             })
         })
 

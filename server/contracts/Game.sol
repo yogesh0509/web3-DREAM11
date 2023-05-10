@@ -373,6 +373,14 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         return s_winnerFunds[s_winner];
     }
 
+    function getAuctionContract() public view returns (address){
+        return address(s_AuctionContract);
+    }
+
+    function getPICContract() public view returns (address){
+        return address(s_player);
+    }
+
     function contractBalances()
         public
         view

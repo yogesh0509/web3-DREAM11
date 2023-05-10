@@ -2,6 +2,7 @@ import { MoralisProvider } from "react-moralis";
 import { NotificationProvider } from "web3uikit";
 import { CookiesProvider } from 'react-cookie';
 import { useCookies } from 'react-cookie';
+import './globals.css';
 import Navbar from "../components/Navbar"
 
 const ethers = require("ethers")
