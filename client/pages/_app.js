@@ -4,6 +4,7 @@ import { CookiesProvider } from 'react-cookie';
 import { useCookies } from 'react-cookie';
 import './globals.css';
 import Navbar from "../components/Navbar"
+import Layout from "../components/Layout"
 
 const ethers = require("ethers")
 const ContractAbi = require("../constants/ContractAbi.json")
@@ -50,8 +51,10 @@ export default function MyApp({ Component, pageProps }) {
         <CookiesProvider>
             <MoralisProvider initializeOnMount={false}>
                 <NotificationProvider>
-                    <Navbar />
-                    <Component {...pageProps} />
+                    <div className="bg-black h-screen">
+                        <Layout />
+                        <Component {...pageProps} />
+                    </div>
                 </NotificationProvider>
             </MoralisProvider>
         </CookiesProvider>
