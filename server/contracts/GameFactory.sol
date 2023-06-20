@@ -7,19 +7,18 @@ import "./Game.sol";
 
 contract GameFactory is Ownable {
     uint256 public GameCount;
-    address[] public GameStorage;
     address public oracle;
     address public link;
     string public jobId;
-
-    constructor(address _oracle, string memory _jobId, address _link) {
+    address[] public GameStorage;
+    
+    constructor(address _oracle, address _link) {
         oracle = _oracle;
-        jobId = _jobId;
         link = _link;
     }
 
-    function createGame(uint256 _time) public onlyOwner {
-        Game newGame = new Game(_time, oracle, jobId, link);
+    function createGame(uint256 _time, string memory _jobId) public onlyOwner {
+        Game newGame = new Game(_time, oracle, _jobId, link);
         GameStorage.push(address(newGame));
         GameCount++;
     }

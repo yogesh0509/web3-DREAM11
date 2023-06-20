@@ -15,19 +15,19 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     }
 
     uint256 public s_auctionTime;
-    uint256 public s_totalBuyerCount;
     uint256 public s_totalplayerCount;
-    uint256 private s_currentplayercount;
+    uint256 public s_currentplayercount;
     uint256 public s_currentAuctionTime;
-    uint256 private s_biddingPrice = 1;
+    uint256 public s_biddingPrice = 1;
+    uint256 public s_TreasuryFunds;
     uint256 private fee;
 
     string public jobId;
-    address private s_winner;
+    address public s_winner;
     bool public s_auctionState;
     bool public s_unlock = false;
     address public oracle;
-    address private owner;
+    address public s_owner;
 
     Auction public s_AuctionContract;
     PIC public s_player;
@@ -38,31 +38,9 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     mapping(address => mapping(uint256 => playerBought))
         private s_BuyerTransactions;
     mapping(address => uint256) public s_BuyerTransactionCount;
-    mapping(uint256 => uint256) private s_playerScore;
     mapping(address => uint256) private s_TeamScore;
-    mapping(address => uint256) private s_winnerFunds;
+    mapping(address => uint256) public s_winnerFunds;
     mapping(address => uint256) public s_DreamToken;
-
-    modifier registeredBuyer() {
-        if (s_buyercheck[msg.sender] == true) {
-            revert BuyerAlreadyRegistered();
-        }
-        _;
-    }
-
-    modifier NotRegisteredBuyer() {
-        if (s_buyercheck[msg.sender] != true) {
-            revert BuyerNotRegistered();
-        }
-        _;
-    }
-
-    modifier checkauctionState() {
-        if (s_auctionState) {
-            revert AuctionIsOpen();
-        }
-        _;
-    }
 
     modifier checklock() {
         if (s_unlock == false) {
@@ -71,15 +49,8 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         _;
     }
 
-    modifier onlyWinner() {
-        if (msg.sender != s_winner) {
-            revert SenderIsNotWinner();
-        }
-        _;
-    }
-
-    modifier onlyOwner(){
-        if(msg.sender != owner){
+    modifier onlyOwner() {
+        if (msg.sender != s_owner) {
             revert NotOwner();
         }
         _;
@@ -88,13 +59,13 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     error NotOwner();
     error IncorrectRegistrationAmount();
     error BuyerAlreadyRegistered();
-    error BuyerNotRegistered();
+    error BidderNotRegistered();
     error AuctionIsOpen();
+    error AuctionIsClosed();
     error NotEnoughFunds();
     error TransferFailed();
     error FundsAreLocked();
     error SenderIsNotWinner();
-    error WinnerFundNotReceived();
 
     event PlayerBid(uint256 indexed tokenId);
     event BuyerRegistered(address indexed registrant);
@@ -108,17 +79,18 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     );
 
     constructor(
-        uint256 time,
+        uint256 _time,
         address _oracle,
         string memory _jobId,
         address _link
     ) {
         s_player = new PIC();
-        s_AuctionContract = new Auction(time);
+        s_AuctionContract = new Auction();
         s_totalplayerCount = s_player.getTokenCounter();
         s_auctionState = false;
-        s_auctionTime = time;
+        s_auctionTime = _time;
         s_currentAuctionTime = block.timestamp + s_auctionTime;
+        s_owner = msg.sender;
 
         if (_link == address(0)) {
             setPublicChainlinkToken();
@@ -131,21 +103,49 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         fee = (1 * LINK_DIVISIBILITY) / 10;
     }
 
-    function register() public payable registeredBuyer checkauctionState {
+    // ------------------------------------------------------------------------------------------------------
+    //                                          USER INTERFACE
+    // ------------------------------------------------------------------------------------------------------
+
+    /**
+     * @notice register any team to participate in the auction
+     */
+
+    function register() public payable {
+        if (s_buyercheck[msg.sender] == true) {
+            revert BuyerAlreadyRegistered();
+        }
+
+        if (s_auctionState) {
+            revert AuctionIsOpen();
+        }
+
         if (msg.value != 1e17) {
             revert IncorrectRegistrationAmount();
         }
         s_DreamToken[msg.sender] = 100;
         s_buyercheck[msg.sender] = true;
         s_buyers.push(msg.sender);
-        s_totalBuyerCount += 1;
         emit BuyerRegistered(msg.sender);
     }
 
-    function bid() public NotRegisteredBuyer {
+    /**
+     * @notice registered teams can bid for the player whose auction is currently going on
+     */
+
+    function bid() public {
+        if (s_buyercheck[msg.sender] != true) {
+            revert BidderNotRegistered();
+        }
+
+        if (!s_auctionState) {
+            revert AuctionIsClosed();
+        }
+
         if (s_DreamToken[msg.sender] < s_biddingPrice) {
             revert NotEnoughFunds();
         }
+        s_DreamToken[msg.sender] -= s_biddingPrice;
         s_AuctionContract.bid(msg.sender, s_biddingPrice);
 
         emit PlayerBid(s_currentplayercount);
@@ -222,30 +222,30 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
 
     function fulfill(
         bytes32 requestId,
-        bytes memory _score
+        bytes memory _ranking
     ) public recordChainlinkFulfillment(requestId) {
         emit RequestFulfilled(requestId);
 
-        uint256[] memory s_score;
-        s_score = abi.decode(_score, (uint256[]));
-
-        for (uint256 i = 0; i < s_totalplayerCount; i++) {
-            s_playerScore[i] = s_score[i];
-        }
-        s_winner = calculateTeamScore();
+        calculateTeamScore(abi.decode(_ranking, (uint256[])));
+        s_winner = calculateWinner();
         s_unlock = true;
         s_winnerFunds[s_winner] = (7 * address(this).balance) / 10;
+        s_TreasuryFunds = (3 * address(this).balance) / 10;
     }
 
-    function editJobId(string memory _jobId) public onlyOwner {
-        jobId = _jobId;
-    }
+    /**
+     * @return address of the chainlink token used
+     */
 
-    function getChainlinkToken() public view returns (address) {
+    function getChainlinkToken() external view returns (address) {
         return chainlinkTokenAddress();
     }
 
-    function withdrawLink() public onlyOwner {
+    /**
+     * @notice transfers link to the caller wallet
+     */
+
+    function withdrawLink() external onlyOwner {
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
         require(
             link.transfer(msg.sender, link.balanceOf(address(this))),
@@ -253,17 +253,23 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         );
     }
 
+    /**
+     * @notice converts string to bytes32
+     * @param _source string which is to be converted to bytes32
+     * @return result bytes32 value
+     */
+
     function stringToBytes32(
-        string memory source
+        string memory _source
     ) private pure returns (bytes32 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
+        bytes memory tempEmptyStringTest = bytes(_source);
         if (tempEmptyStringTest.length == 0) {
             return 0x0;
         }
 
         assembly {
             // solhint-disable-line no-inline-assembly
-            result := mload(add(source, 32))
+            result := mload(add(_source, 32))
         }
     }
 
@@ -271,17 +277,30 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     //                                          RESULT CALCULATOR AND WITHDRAWLS
     // ------------------------------------------------------------------------------------------------------
 
-    function calculateTeamScore() internal returns (address) {
-        address maxTeam;
-        uint256 maxScore;
-        for (uint256 i = 0; i < s_totalBuyerCount; i++) {
+    /**
+     * @notice records team score using the ranking of each player
+     * @param _playerRanking array of player rankings recieved by chainlink api call
+     */
+
+    function calculateTeamScore(uint256[] memory _playerRanking) internal {
+        for (uint256 i = 0; i < s_buyers.length; i++) {
             address Team = s_buyers[i];
             uint256 result;
             for (uint256 j = 0; j < s_BuyerTransactionCount[Team]; j++) {
                 uint256 id = s_BuyerTransactions[Team][j].tokenId;
-                result += (100 - s_playerScore[id] + 1) / 10;
+                result += (100 - _playerRanking[id] + 1) / 10;
             }
             s_TeamScore[Team] = result;
+        }
+    }
+
+    function calculateWinner() public view returns (address) {
+        address maxTeam;
+        uint256 maxScore;
+
+        for (uint256 i = 0; i < s_buyers.length; i++) {
+            address Team = s_buyers[i];
+            uint256 result = s_TeamScore[Team];
             if (result > maxScore) {
                 maxTeam = Team;
                 maxScore = result;
@@ -295,7 +314,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         s_DreamToken[msg.sender] += amount;
     }
 
-    function convertTokenToEth() public payable checklock {
+    function convertDreamTokenToEth() public payable checklock {
         uint256 amount = s_DreamToken[msg.sender];
         s_DreamToken[msg.sender] = 0;
         (bool success, ) = (msg.sender).call{value: amount * 1e15}("");
@@ -304,7 +323,11 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         }
     }
 
-    function withdrawWinnerFunds() public payable checklock onlyWinner {
+    function withdrawWinnerFunds() public payable checklock {
+        if (msg.sender != s_winner) {
+            revert SenderIsNotWinner();
+        }
+
         uint256 amount = s_winnerFunds[msg.sender];
         s_winnerFunds[msg.sender] = 0;
         (bool success, ) = (msg.sender).call{value: amount}("");
@@ -313,8 +336,10 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         }
     }
 
-    function withdrawFunds() public payable onlyOwner checklock {
-        (bool success, ) = (msg.sender).call{value: address(this).balance}("");
+    function withdrawTreasuryFunds() public payable checklock onlyOwner {
+        uint256 amount = s_TreasuryFunds;
+        s_TreasuryFunds = 0;
+        (bool success, ) = (msg.sender).call{value: amount}("");
         if (!success) {
             revert TransferFailed();
         }
@@ -324,60 +349,34 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     //                                          STATE VARIABLES
     // ------------------------------------------------------------------------------------------------------
 
-    function moneyspent(address registrant) public view returns (uint256) {
+    function moneyspent(address _registrant) public view returns (uint256) {
         uint256 sum = 0;
-        for (uint256 i = 0; i < s_BuyerTransactionCount[registrant]; i++) {
-            sum += s_BuyerTransactions[registrant][i].price;
+        for (uint256 i = 0; i < s_BuyerTransactionCount[_registrant]; i++) {
+            sum += s_BuyerTransactions[_registrant][i].price;
         }
         return sum;
     }
 
     function fetchPlayers(
-        address registrant
+        address _registrant
     ) public view returns (playerBought[] memory) {
-        uint256 count = s_BuyerTransactionCount[registrant];
+        uint256 count = s_BuyerTransactionCount[_registrant];
         playerBought[] memory players = new playerBought[](count);
         for (uint256 i = 0; i < count; i++) {
-            players[i] = s_BuyerTransactions[registrant][i];
+            players[i] = s_BuyerTransactions[_registrant][i];
         }
         return players;
     }
 
-    function getCurrentPlayerCount() public view returns (uint256) {
-        return s_currentplayercount;
+    function getTeamScore(address _registrant) public view returns (uint256) {
+        return s_TeamScore[_registrant];
     }
 
-    function getAuctionBid() public view returns (uint256) {
-        return s_biddingPrice;
-    }
-
-    function getWinner() public view returns (address) {
-        return s_winner;
-    }
-
-    function getPlayerRanking(uint256 _id) public view returns (uint256) {
-        return s_playerScore[_id];
-    }
-
-    function getBuyers() public view returns (address[] memory) {
-        return s_buyers;
-    }
-
-    function getPlayersPurchased(
-        address registrant
-    ) public view returns (uint256) {
-        return s_BuyerTransactionCount[registrant];
-    }
-
-    function getWinnerFunds() public view returns (uint256) {
-        return s_winnerFunds[s_winner];
-    }
-
-    function getAuctionContract() public view returns (address){
+    function getAuctionContract() public view returns (address) {
         return address(s_AuctionContract);
     }
 
-    function getPICContract() public view returns (address){
+    function getPICContract() public view returns (address) {
         return address(s_player);
     }
 
@@ -395,5 +394,6 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     }
 
     fallback() external payable {}
+
     receive() external payable {}
 }

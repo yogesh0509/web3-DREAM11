@@ -5,13 +5,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
     
-    const arguments = []
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6
     const PIC = await deploy("PIC", {
         from: deployer,
-        args: arguments,
         log: true,
         waitConfirmations: waitBlockConfirmations
     })

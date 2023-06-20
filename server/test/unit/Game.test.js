@@ -3,10 +3,12 @@ const { network, deployments, ethers } = require("hardhat");
 const { developmentChains } = require("../../helper-hardhat-config");
 
 const tokenUri = "ipfs://bafyreiflh4wjd2shgk2kguff5gl5uv6ifpdszfgfep2itve3tdzqugx7mu/metadata.json";
-const payment = '3000000000000000000'
-const callbackValue = "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000004"
-const bid = ethers.utils.parseEther("0.1")
 const AUCTION_TIME = 300;
+const Wrongbid = ethers.utils.parseEther("0.01")
+const bid = ethers.utils.parseEther("0.1")
+const payment = ethers.utils.parseEther("3")
+const callbackValue = "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000004"
+
 
 !developmentChains.includes(network.name)
     ? describe.skip
@@ -20,16 +22,25 @@ const AUCTION_TIME = 300;
             oracleContract = await ethers.getContract("MockOracle")
             linkContract = await ethers.getContract("LinkToken")
             PICContract = await ethers.getContract("PIC")
-            // AuctionContract = await ethers.getContract("Auction")
 
             Game = GameContract.connect(accounts[0])
             oracle = oracleContract.connect(accounts[0])
             link = linkContract.connect(accounts[0])
-            PIC = PICContract(await Game.getPICContract())
+            PIC = PICContract.attach(await Game.getPICContract())
             await PIC.mintPlayer(tokenUri, "batsman", 1);
         })
 
-        describe("constructor", () => {
+        async function waitTimeToStartAuction() {
+            await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
+            await network.provider.request({ method: "evm_mine", params: [] })
+        }
+
+        async function waitTimeInterval() {
+            await network.provider.send("evm_increaseTime", [AUCTION_TIME])
+            await network.provider.request({ method: "evm_mine", params: [] })
+        }
+
+        describe("contract deployment", () => {
             it("initial auction state", async () => {
                 assert.equal((await Game.s_auctionState()).toString(), "false")
             })
@@ -39,207 +50,113 @@ const AUCTION_TIME = 300;
             })
         })
 
-        describe("start auction trigger", () => {
-
-            it("reverts if buyer has not registered", async () => {
-                await expect(Game.bid()).to.be.revertedWith("BuyerNotRegistered")
+        describe("tests for register function", () => {
+            it("auction is open", async () => {
+                await waitTimeToStartAuction()
+                await Game.performUpkeep([])
+                await expect(Game.register()).to.be.revertedWith("AuctionIsOpen")
             })
 
-            it("reverts if auction has not started", async () => {
+            it("incorrect eth amount", async () => {
+                await expect(Game.register({value: Wrongbid})).to.be.revertedWith("IncorrectRegistrationAmount")
+            })
+
+            it("user registration success", async () => {
+                await expect(Game.register({value: bid})).to.emit(Game, "BuyerRegistered")
+            })
+
+            it("buyer already registered", async () => {
                 await Game.register({value: bid})
-                await expect(Game.bid()).to.be.revertedWith("AuctionHasEnded")
-            })
-
-            it("auction will be started if enough time has passed", async () => {
-                await network.provider.send("evm_increaseTime", [2*AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                // This will trigger the start auction function.
-                await expect(Game.performUpkeep([])).to.emit(Game, "AuctionStarted");
-                console.log("time passed")
-
-                assert.equal((await Game.s_auctionState()).toString(), "true")
-                console.log("time passed")
-
+                await expect(Game.register({value: bid})).to.be.revertedWith("BuyerAlreadyRegistered")
             })
         })
 
-        describe("checkupkeep", () => {
+        describe("tests for bid function", () => {
+            it("bidder has not registered", async () => {
+                await expect(Game.bid()).to.be.revertedWith("BidderNotRegistered")
+            })
 
-            it("initial start auction upkeepNeeded", async () => {
+            it("auction has not started", async () => {
+                await Game.register({value: bid})
+                await expect(Game.bid()).to.be.revertedWith("AuctionIsClosed")
+            })
 
-                await network.provider.send("evm_increaseTime", [2*AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
+            it("bid success", async () => {
+                await Game.register({value: bid})
+                await waitTimeToStartAuction()
+                await Game.performUpkeep([])
+                await expect(Game.bid()).to.emit(Game, "PlayerBid")
+            })
+        })
 
+        describe("tests for checkUpkeep function", () => {
+            it("upkeepNeeded is true for toggle auction", async () => {
+
+                await waitTimeToStartAuction()
                 const { upkeepNeeded } = await Game.callStatic.checkUpkeep("0x")
                 assert.equal(upkeepNeeded, true)
             })
 
-            it("end auction upkeepNeeded", async () => {
+            it("upkeepNeeded is false when all the players have been auctioned", async () => {
 
-                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
+                await waitTimeToStartAuction()
                 await Game.performUpkeep([])
-
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
+                await waitTimeInterval()
+                await Game.performUpkeep([])
 
                 const { upkeepNeeded } = await Game.callStatic.checkUpkeep("0x")
-                assert.equal(upkeepNeeded, true)
-            })
-
-        })
-
-        describe("auction ended", () => {
-
-            beforeEach(async () => {
-                await Game.register()
-
-                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-                await Game.bid({ value: bid })
-
-            })
-
-            it("end the auction using chainlink keepers", async () => {
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await expect(Game.performUpkeep([])).to.emit(Game, "AuctionEnded");
-
-            })
-
-            it("check if the funds have been transferred", async () => {
-                assert.equal((await Game.provider.getBalance(Game.address)).toString(), "0")
-
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-                assert.equal((await Game.provider.getBalance(Game.address)).toString(), bid)
-
+                assert.equal(upkeepNeeded, false)
             })
         })
 
-        describe("get result from chainlink api", () => {
-            let tx, txreceipt, requestId;
-            beforeEach(async () => {
+        describe("tests for performUpkeep function", () => {
+
+            it("auction started", async () => {
+                await waitTimeToStartAuction()
+                await expect(Game.performUpkeep([])).to.emit(Game, "AuctionStarted")
+            })
+
+            it("auction ended", async () => {
+                await Game.register({value: bid})
+                Game = GameContract.connect(accounts[1])
+                await Game.register({value: bid})
+                Game = GameContract.connect(accounts[0])
+
+                await waitTimeToStartAuction()
+                await Game.performUpkeep([])
+
+                await Game.bid()
+                Game = GameContract.connect(accounts[1])
+                await Game.bid()
+                Game = GameContract.connect(accounts[0])
+
+                await waitTimeInterval()
+                await expect(Game.performUpkeep([])).to.emit(Game, "AuctionEnded")
+                assert.equal((await Game.moneyspent(accounts[1].address)).toString(), "3")
+                assert.equal((await Game.moneyspent(accounts[0].address)).toString(), "0")
+
+                console.log(await Game.fetchPlayers(accounts[1].address))
+            })
+
+            it("all the players have been sold (return data from chainlink api)", async () => {
+                let tx, txreceipt, requestId;
                 await link.transfer(Game.address, payment)
 
-                await Game.register()
+                await Game.register({value: bid})
 
-                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
+                await waitTimeToStartAuction()
                 await Game.performUpkeep([])
 
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
+                await waitTimeInterval()
                 await Game.performUpkeep([])
 
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
+                await waitTimeInterval()
                 tx = await Game.performUpkeep([])
                 txreceipt = await tx.wait(1)
                 requestId = txreceipt.events[0].topics[1]
 
-            })
-
-            it("successfully make an api request", async () => {
                 expect(requestId).to.not.be.null
-            })
-
-            it("Should successfully make an API request and get a result", async () => {
                 await expect(oracle.fulfillOracleRequest(requestId, callbackValue)).to.emit(Game, "RequestFulfilled")
-            })
-        })
-
-        describe("returning variables", () => {
-
-            it("get all buyers", async () => {
-
-                await Game.register()
-                assert.equal((await Game.getBuyers()).toString(), accounts[0].address)
-            })
-            it("no of players purchasd by a registrant", async () => {
-
-                await Game.register()
-                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-                await Game.bid({ value: bid })
-
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-                assert.equal((await Game.getPlayersPurchased(accounts[0].address)).toString(), 1)
-            })
-            it("sum spent by a registrant", async () => {
-
-                await Game.register()
-                Game = GameContract.connect(accounts[1])
-                await Game.register()
-                Game = GameContract.connect(accounts[0])
-
-                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-                await Game.bid({ value: bid })
-                Game = GameContract.connect(accounts[1])
-                await Game.bid({ value: bid + 5e14})
-                Game = GameContract.connect(accounts[0])
-                await Game.bid({ value: bid + 1e15})
-
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-                assert.equal((await Game.moneyspent(accounts[0].address)).toString(), bid+1e15)
-            })
-            it("return team score and winner", async () => {
-
-                await PIC.mintNft(tokenUri)
-                await Game.register()
-                await link.transfer(Game.address, payment)
-
-                Game = GameContract.connect(accounts[1])
-                await Game.register()
-                Game = GameContract.connect(accounts[0])
-
-                await network.provider.send("evm_increaseTime", [2 * AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-                await Game.bid({ value: bid })
-
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-
-                Game = GameContract.connect(accounts[1])
-                await Game.bid({ value: bid })
-                Game = GameContract.connect(accounts[0])
-
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                await Game.performUpkeep([])
-
-                await network.provider.send("evm_increaseTime", [AUCTION_TIME])
-                await network.provider.request({ method: "evm_mine", params: [] })
-                const tx = await Game.performUpkeep([])
-                const txreceipt = await tx.wait(1)
-                const requestId = txreceipt.events[0].topics[1]
-                await oracle.fulfillOracleRequest(requestId, callbackValue)
-
-                assert.equal((await Game.getTeamScore(accounts[0].address)).toString(), 3)
-                assert.equal((await Game.getTeamScore(accounts[1].address)).toString(), 4)
-                assert.equal((await Game.getWinner()), accounts[1].address)
             })
         })
     })
