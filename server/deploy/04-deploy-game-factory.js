@@ -10,7 +10,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     let chainId = network.config.chainId;
     let LinkTokenAddress, MockOracleAddress;
 
-    const jobId = networkConfig[chainId]["jobId"];
 
     if (developmentChains.includes(network.name)) {
         
@@ -25,13 +24,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         LinkTokenAddress = networkConfig[chainId]["LinkTokenAddress"];
     }
 
-    const PICContract = await deployments.get("PIC");
-
-    const arguments = [AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress, PICContract.address]
+    const arguments = [MockOracleAddress, LinkTokenAddress]
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6
-    const Game = await deploy("Game", {
+    const Game = await deploy("GameFactory", {
         from: deployer,
         args: arguments,
         log: true,
@@ -44,4 +41,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 }
 
-module.exports.tags = ["all", "Game", "unit"]
+module.exports.tags = ["all", "GameFactory", "main"]

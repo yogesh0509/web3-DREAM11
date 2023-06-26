@@ -135,7 +135,6 @@ const callbackValue = "0x0000000000000000000000000000000000000000000000000000000
                 assert.equal((await Game.moneyspent(accounts[1].address)).toString(), "3")
                 assert.equal((await Game.moneyspent(accounts[0].address)).toString(), "0")
 
-                console.log(await Game.fetchPlayers(accounts[1].address))
             })
 
             it("all the players have been sold (return data from chainlink api)", async () => {

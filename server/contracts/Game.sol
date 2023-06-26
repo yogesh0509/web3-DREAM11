@@ -5,11 +5,12 @@ import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 
 import "./Auction.sol";
-import "./PIC.sol";
+import "./interfaces/IPIC.sol";
 
 contract Game is ChainlinkClient, AutomationCompatibleInterface {
     using Chainlink for Chainlink.Request;
     struct playerBought {
+        IPlayer.PlayerQuery player;
         uint256 tokenId;
         uint256 price;
     }
@@ -30,7 +31,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     address public s_owner;
 
     Auction public s_AuctionContract;
-    PIC public s_player;
+    IPIC public s_PICContract;
 
     address[] public s_buyers;
 
@@ -82,11 +83,12 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         uint256 _time,
         address _oracle,
         string memory _jobId,
-        address _link
+        address _link,
+        address _PICAddress
     ) {
-        s_player = new PIC();
+        s_PICContract = IPIC(_PICAddress);
         s_AuctionContract = new Auction();
-        s_totalplayerCount = s_player.getTokenCounter();
+        s_totalplayerCount = s_PICContract.getTotalPlayers();
         s_auctionState = false;
         s_auctionTime = _time;
         s_currentAuctionTime = block.timestamp + s_auctionTime;
@@ -177,7 +179,6 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     }
 
     function performUpkeep(bytes calldata /*performData*/) external {
-        s_totalplayerCount = s_player.getTokenCounter();
         if (s_currentplayercount < s_totalplayerCount) {
             if (
                 (block.timestamp - s_currentAuctionTime >= s_auctionTime) &&
@@ -200,9 +201,15 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
                 emit AuctionEnded(s_highestBidder, s_highestBid);
 
                 s_biddingPrice = 1;
+
                 s_BuyerTransactions[s_highestBidder][
                     s_BuyerTransactionCount[s_highestBidder]
-                ] = playerBought(s_currentplayercount, s_highestBid);
+                ] = playerBought(
+                    s_PICContract.getplayerDetails(s_currentplayercount),
+                    s_currentplayercount,
+                    s_highestBid
+                );
+
                 s_BuyerTransactionCount[s_highestBidder]++;
                 s_currentplayercount++;
             }
@@ -377,7 +384,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     }
 
     function getPICContract() public view returns (address) {
-        return address(s_player);
+        return address(s_PICContract);
     }
 
     function contractBalances()
