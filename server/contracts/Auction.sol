@@ -24,7 +24,7 @@ contract Auction is Ownable{
         emit AuctionStarted();
     }
 
-    function bid(address bidder, uint256 _bid) external onlyOwner{
+    function bid(address _bidder, uint256 _bid) external onlyOwner{
 
         if (_bid <= s_highestBid) {
             revert NeedHigherBid(s_highestBid);
@@ -34,16 +34,16 @@ contract Auction is Ownable{
             pendingReturns[s_highestBidder] += s_highestBid;
         }
 
-        s_highestBidder = bidder;
+        s_highestBidder = _bidder;
         s_highestBid = _bid;
         emit HighestBidIncrease(s_highestBidder, s_highestBid);
     }
 
-    function withdraw() external onlyOwner returns(uint256 amount){
-        amount = pendingReturns[msg.sender];
+    function withdraw(address _bidder) external onlyOwner returns(uint256 amount){
+        amount = pendingReturns[_bidder];
 
         if (amount > 0) {
-            pendingReturns[msg.sender] = 0;
+            pendingReturns[_bidder] = 0;
             return amount;
         }
     }

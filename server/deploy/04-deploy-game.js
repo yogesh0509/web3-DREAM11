@@ -25,9 +25,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         LinkTokenAddress = networkConfig[chainId]["LinkTokenAddress"];
     }
 
-    const PICContract = await deployments.get("GameFactory");
+    const GameFactoryContract = await deployments.get("GameFactory");
 
-    const arguments = [AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress, PICContract.address]
+    const arguments = [AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress, GameFactoryContract.address]
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6

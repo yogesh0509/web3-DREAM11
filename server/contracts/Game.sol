@@ -325,7 +325,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
     }
 
     function withdrawDreamToken() public {
-        uint256 amount = s_AuctionContract.withdraw();
+        uint256 amount = s_AuctionContract.withdraw(msg.sender);
         s_DreamToken[msg.sender] += amount;
     }
 
