@@ -25,7 +25,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         LinkTokenAddress = networkConfig[chainId]["LinkTokenAddress"];
     }
 
-    const PICContract = await deployments.get("PIC");
+    const PICContract = await deployments.get("GameFactory");
 
     const arguments = [AUCTION_TIME, MockOracleAddress, jobId, LinkTokenAddress, PICContract.address]
     const waitBlockConfirmations = developmentChains.includes(network.name)
@@ -44,4 +44,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 }
 
-module.exports.tags = ["all", "Game", "unit"]
+module.exports.tags = ["all", "Game", "master"]

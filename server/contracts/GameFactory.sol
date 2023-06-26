@@ -1,24 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.8;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/IGame.sol";
 import "./PIC.sol";
-import "./Game.sol";
 
 contract GameFactory is Ownable {
-    address public oracle;
-    address public link;
-    string public jobId;
-
     address[] public GameStorage;
-    
-    constructor(address _oracle, address _link) {
-        oracle = _oracle;
-        link = _link;
-    }
 
-    function createGame(uint256 _time, string memory _jobId, IPlayer.PlayerQuery[] memory _Players) public onlyOwner {
+    function createGame(address _newGame, IPlayer.PlayerQuery[] memory _Players) public onlyOwner {
         PIC newPlayer = new PIC(_Players);
-        Game newGame = new Game(_time, oracle, _jobId, link, address(newPlayer));
-        GameStorage.push(address(newGame));
+        IGame newGame = IGame(_newGame);
+        newGame.start(address(newPlayer));
+        GameStorage.push(_newGame);
     }
 }

@@ -7,7 +7,7 @@ import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "./Auction.sol";
 import "./interfaces/IPIC.sol";
 
-contract Game is ChainlinkClient, AutomationCompatibleInterface {
+contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
     using Chainlink for Chainlink.Request;
     struct playerBought {
         IPlayer.PlayerQuery player;
@@ -26,9 +26,9 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
     string public jobId;
     address public s_winner;
     bool public s_auctionState;
-    bool public s_unlock = false;
+    bool public s_unlock = true;
     address public oracle;
-    address public s_owner;
+    address public s_gameowner;
 
     Auction public s_AuctionContract;
     IPIC public s_PICContract;
@@ -50,13 +50,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         _;
     }
 
-    modifier onlyOwner() {
-        if (msg.sender != s_owner) {
-            revert NotOwner();
-        }
-        _;
-    }
-
+    error UnauthorizedCaller();
     error NotOwner();
     error IncorrectRegistrationAmount();
     error BuyerAlreadyRegistered();
@@ -84,15 +78,12 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         address _oracle,
         string memory _jobId,
         address _link,
-        address _PICAddress
+        address _gameowner
     ) {
-        s_PICContract = IPIC(_PICAddress);
         s_AuctionContract = new Auction();
-        s_totalplayerCount = s_PICContract.getTotalPlayers();
-        s_auctionState = false;
         s_auctionTime = _time;
-        s_currentAuctionTime = block.timestamp + s_auctionTime;
-        s_owner = msg.sender;
+        s_auctionState = false;
+        s_gameowner = _gameowner;
 
         if (_link == address(0)) {
             setPublicChainlinkToken();
@@ -103,6 +94,23 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface {
         oracle = _oracle;
         jobId = _jobId;
         fee = (1 * LINK_DIVISIBILITY) / 10;
+    }
+
+    /**
+     * @notice state change before starting games.
+     * @param _PICAddress PIC contract address
+     */
+
+    function start(address _PICAddress) external {
+
+        if(msg.sender != s_gameowner){
+            revert UnauthorizedCaller();
+        }
+
+        s_PICContract = IPIC(_PICAddress);
+        s_totalplayerCount = s_PICContract.getTotalPlayers();
+        s_unlock = false;
+        s_currentAuctionTime = block.timestamp;
     }
 
     // ------------------------------------------------------------------------------------------------------

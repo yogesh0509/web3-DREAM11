@@ -7,30 +7,12 @@ const AUCTION_TIME = 300;
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
-    let chainId = network.config.chainId;
-    let LinkTokenAddress, MockOracleAddress;
 
-
-    if (developmentChains.includes(network.name)) {
-        
-        const linkToken = await ethers.getContract("LinkToken");
-        const MockOracle = await ethers.getContract("MockOracle");
-
-        LinkTokenAddress = linkToken.address
-        MockOracleAddress = MockOracle.address
-    }
-    else {
-        MockOracleAddress = networkConfig[chainId]["MockOracleAddress"];
-        LinkTokenAddress = networkConfig[chainId]["LinkTokenAddress"];
-    }
-
-    const arguments = [MockOracleAddress, LinkTokenAddress]
     const waitBlockConfirmations = developmentChains.includes(network.name)
         ? 1
         : 6
     const Game = await deploy("GameFactory", {
         from: deployer,
-        args: arguments,
         log: true,
         waitConfirmations: waitBlockConfirmations
     })
