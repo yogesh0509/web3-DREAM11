@@ -1,0 +1,53 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk&display=swap");
+@font-face {
+  font-family: "Proxima";
+  src: url("/fonts/Proxima.otf");
+}
+@font-face {
+  font-family: "Proxima-Bold";
+  src: url("/fonts/ProximaNovaA-Bold.ttf");
+}
+@font-face {
+  font-family: "Proxima-SemiBold";
+  src: url("/fonts/ProximaNovaA-SemiBold.ttf");
+}
+@font-face {
+  font-family: "Recoleta";
+  src: url("/fonts/Recoleta.otf");
+}
+@font-face {
+  font-family: "Recoleta-Bold";
+  src: url("/fonts/Recoleta-Bold.ttf");
+}
+@font-face {
+  font-family: "Recoleta-Black";
+  src: url("/fonts/Recoleta-Black.ttf");
+}
+@font-face {
+  font-family: "Recoleta-SemiBold";
+  src: url("/fonts/Recoleta-SemiBold.ttf");
+}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  display: none;
+  -webkit-box-shadow: none;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  background-color: #a69c9c99;
+  border: 1px solid #949494;
+  border-right-width: 0;
+}
+
+body {
+  scroll-behavior: smooth;
+  overflow: overlay;
+}

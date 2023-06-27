@@ -1,0 +1,67 @@
+.logo {
+  width: 400%;
+  /* width: 600%; */
+  animation: 25s slide infinite linear;
+  top: 50%;
+  transform: translate(0, -50%);
+}
+.project {
+  width: 400%;
+  animation: 25s slide infinite linear;
+  top: 50%;
+  transform: translate(0, -50%);
+}
+
+@keyframes slide {
+  from {
+    left: 0;
+  }
+  to {
+    left: -200%;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .logo {
+    width: 600%;
+    animation: 25s slide infinite linear;
+    top: 50%;
+    transform: translate(0, -50%);
+  }
+  .project {
+    width: 600%;
+    animation: 25s slide infinite linear;
+    top: 50%;
+    transform: translate(0, -50%);
+  }
+  @keyframes slide {
+    from {
+      left: 0;
+    }
+    to {
+      left: -300%;
+    }
+  }
+}
+@media screen and (max-width: 500px) {
+  .logo {
+    width: 800%;
+    animation: 25s slide infinite linear;
+    top: 50%;
+    transform: translate(0, -50%);
+  }
+  .project {
+    width: 800%;
+    animation: 25s slide infinite linear;
+    top: 50%;
+    transform: translate(0, -50%);
+  }
+  @keyframes slide {
+    from {
+      left: 0;
+    }
+    to {
+      left: -400%;
+    }
+  }
+}
