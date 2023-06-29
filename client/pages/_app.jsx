@@ -8,21 +8,23 @@ import {
     getDefaultWallets,
     connectorsForWallets,
 } from "@rainbow-me/rainbowkit";
-import { Toaster } from "react-hot-toast";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
-import { mainnet, polygon, polygonMumbai } from "wagmi/chains";
+import { polygonMumbai } from "wagmi/chains";
 import { publicProvider } from "wagmi/providers/public";
 
+import { Toaster } from "react-hot-toast";
 import { CookiesProvider } from 'react-cookie';
 import { useCookies } from 'react-cookie';
 import { MutatingDots } from "react-loader-spinner";
 
+import Navbar from "../components/Navbar/Navbar";
+
 const { chains, publicClient, webSocketPublicClient } = configureChains(
-    [mainnet, polygon, polygonMumbai],
+    [polygonMumbai],
     [publicProvider()]
 );
 
-const projectId = "YOUR_PROJECT_ID";
+const projectId = "e2126c812a5444455d0d8a781049a86f";
 
 const { wallets } = getDefaultWallets({
     appName: "web3-DREAM11",
@@ -43,8 +45,8 @@ const wagmiConfig = createConfig({
     webSocketPublicClient,
 });
 
-const ethers = require("ethers")
-const ContractAbi = require("../constants/ContractAbi.json")
+// const ethers = require("ethers")
+// const ContractAbi = require("../constants/ContractAbi.json")
 
 export default function MyApp({ Component, pageProps }) {
 
@@ -53,46 +55,46 @@ export default function MyApp({ Component, pageProps }) {
         setReady(true);
     }, []);
 
-    const [cookies, setCookie] = useCookies(['time']);
-    const [cookiesState, setCookieState] = useCookies(['state']);
+    // const [cookies, setCookie] = useCookies(['time']);
+    // const [cookiesState, setCookieState] = useCookies(['state']);
 
-    let address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS;
-    let abi = JSON.parse(ContractAbi["Marketplace"])
-    const provider = new ethers.providers.WebSocketProvider(
-        `wss://young-warmhearted-ensemble.matic-testnet.discover.quiknode.pro/${process.env.NEXT_PUBLIC_INFURA_KEY}/`
-    );
-    const contract = new ethers.Contract(address, abi, provider);
+    // let address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS;
+    // let abi = JSON.parse(ContractAbi["Marketplace"])
+    // const provider = new ethers.providers.WebSocketProvider(
+    //     `wss://young-warmhearted-ensemble.matic-testnet.discover.quiknode.pro/${process.env.NEXT_PUBLIC_INFURA_KEY}/`
+    // );
+    // const contract = new ethers.Contract(address, abi, provider);
 
-    contract.on("AuctionStarted", (from, to, value, event) => {
-        let transferEvent = {
-            from: from,
-            to: to,
-            value: value,
-            eventData: event,
-        }
-        let time = Date.now()
-        let flag = false
-        setCookie('time', time, { path: '/' })
-        setCookieState('state', flag, { path: '/' })
-    })
+    // contract.on("AuctionStarted", (from, to, value, event) => {
+    //     let transferEvent = {
+    //         from: from,
+    //         to: to,
+    //         value: value,
+    //         eventData: event,
+    //     }
+    //     let time = Date.now()
+    //     let flag = false
+    //     setCookie('time', time, { path: '/' })
+    //     setCookieState('state', flag, { path: '/' })
+    // })
 
-    contract.on("AuctionEnded", (from, to, value, event) => {
-        let transferEvent = {
-            from: from,
-            to: to,
-            value: value,
-            eventData: event,
-        }
-        let time = Date.now()
-        let flag = true
-        setCookie('time', time, { path: '/' })
-        setCookieState('state', flag, { path: '/' })
+    // contract.on("AuctionEnded", (from, to, value, event) => {
+    //     let transferEvent = {
+    //         from: from,
+    //         to: to,
+    //         value: value,
+    //         eventData: event,
+    //     }
+    //     let time = Date.now()
+    //     let flag = true
+    //     setCookie('time', time, { path: '/' })
+    //     setCookieState('state', flag, { path: '/' })
 
-    })
+    // })
 
     return (
         <CookiesProvider>
-            <div>
+            <div className="bg-black">
                 {ready ? (
                     <WagmiConfig config={wagmiConfig}>
                         <RainbowKitProvider
@@ -101,6 +103,7 @@ export default function MyApp({ Component, pageProps }) {
                             modalSize="compact"
                         >
                             <Toaster position="top-center" reverseOrder={false} />
+                            <Navbar />
                             <Component {...pageProps} />
                         </RainbowKitProvider>
                     </WagmiConfig>
