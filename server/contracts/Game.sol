@@ -101,7 +101,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
      * @param _PICAddress PIC contract address
      */
 
-    function start(address _PICAddress) external {
+    function start(address _PICAddress, uint256 _auctionStartTime) external {
 
         if(msg.sender != s_gameowner){
             revert UnauthorizedCaller();
@@ -110,7 +110,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
         s_PICContract = IPIC(_PICAddress);
         s_totalplayerCount = s_PICContract.getTotalPlayers();
         s_unlock = false;
-        s_currentAuctionTime = block.timestamp;
+        s_currentAuctionTime = block.timestamp + s_auctionTime - _auctionStartTime;
     }
 
     // ------------------------------------------------------------------------------------------------------
@@ -231,6 +231,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
                 stringToBytes32(jobId),
                 this.fulfill.selector
             );
+            request.add("PIC", addressToString(address(s_PICContract)));
             sendOperatorRequestTo(oracle, request, fee);
         }
     }
@@ -286,6 +287,24 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
             // solhint-disable-line no-inline-assembly
             result := mload(add(_source, 32))
         }
+    }
+
+    function addressToString(address _address) public pure returns (string memory) {
+        bytes32 value = bytes32(uint256(uint160(_address)));
+        bytes memory alphabet = "0123456789abcdef";
+
+        bytes memory str = new bytes(42);
+        str[0] = '0';
+        str[1] = 'x';
+        for (uint256 i = 0; i < 20; i++) {
+            str[2 + i * 2] = alphabet[uint8(value[i + 12] >> 4)];
+            str[3 + i * 2] = alphabet[uint8(value[i + 12] & 0x0f)];
+        }
+        return string(str);
+    }
+
+    function editjobId(string memory _jobId) public onlyOwner{
+        jobId = _jobId;
     }
 
     // ------------------------------------------------------------------------------------------------------

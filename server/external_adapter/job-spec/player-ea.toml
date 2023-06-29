@@ -10,7 +10,7 @@ observationSource = """
                   data="$(jobRun.logData)"
                   topics="$(jobRun.logTopics)"]
     decode_cbor  [type=cborparse data="$(decode_log.data)"]
-    fetch        [type=bridge name="ea-id-bridge"]
+    fetch        [type=bridge name="ea-id-bridge" requestData="{\\"id\\": $(jobSpec.externalJobID), \\"data\\": { \\"PIC\\": $(decode_cbor.PIC)}}"]
     parse        [type=jsonparse path="data" data="$(fetch)"]
     encode_data  [type=ethabiencode abi="(bytes32 requestId,bytes _score)" data="{\\"requestId\\": $(decode_log.requestId),\\"_score\\": $(parse) }"]
     encode_tx    [type=ethabiencode

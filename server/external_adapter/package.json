@@ -1,5 +1,5 @@
 {
-  "name": "EA-NodeJS-Template",
+  "name": "EA-WEB3-DREAM11",
   "version": "0.1.0",
   "author": "",
   "description": "",
@@ -10,10 +10,9 @@
   },
   "dependencies": {
     "@chainlink/external-adapter": "^0.2.3",
-    "@moralisweb3/common-evm-utils": "^2.10.3",
     "dotenv": "^16.0.3",
     "ethers": "^5.7.2",
-    "moralis": "^2.10.3"
+    "nodemon": "^2.0.22"
   },
   "devDependencies": {
     "body-parser": "^1.19.0",
