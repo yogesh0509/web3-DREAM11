@@ -1,5 +1,4 @@
 import React from "react";
-
 import '../styles/globals.css';
 import "@rainbow-me/rainbowkit/styles.css";
 
@@ -11,17 +10,17 @@ import {
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
 import { polygonMumbai } from "wagmi/chains";
 import { publicProvider } from "wagmi/providers/public";
+import { alchemyProvider } from 'wagmi/providers/alchemy'
 
 import { Toaster } from "react-hot-toast";
 import { CookiesProvider } from 'react-cookie';
-import { useCookies } from 'react-cookie';
 import { MutatingDots } from "react-loader-spinner";
 
 import Navbar from "../components/Navbar/Navbar";
 
 const { chains, publicClient, webSocketPublicClient } = configureChains(
     [polygonMumbai],
-    [publicProvider()]
+    [alchemyProvider({ apiKey: process.env.NEXT_PUBLIC_ALCHEMY_KEY }), publicProvider()]
 );
 
 const projectId = "e2126c812a5444455d0d8a781049a86f";
@@ -94,7 +93,7 @@ export default function MyApp({ Component, pageProps }) {
 
     return (
         <CookiesProvider>
-            <div className="bg-black">
+            <div>
                 {ready ? (
                     <WagmiConfig config={wagmiConfig}>
                         <RainbowKitProvider

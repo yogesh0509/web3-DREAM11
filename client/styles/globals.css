@@ -48,6 +48,7 @@
 }
 
 body {
+  background-color: black;
   scroll-behavior: smooth;
   overflow: overlay;
 }

@@ -1,16 +1,22 @@
 import React from "react";
+import { useRouter } from 'next/router'
 
-export default function PlayerCard() {
+export default function PlayerCard(props) {
+    console.log(props)
+    const router = useRouter()
+    const playerDetails = ()=>{
+        router.push(`${props.GameAddress}/player-details/${props.id}`)
+    }
     return (
         <div className="py-6 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div className="md:col-span-2 lg:col-span-3">
-                        <a href="/nft-details">
+                        <button onClick={playerDetails}>
                             <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
                                 <img
                                     className="w-full h-64 object-cover"
-                                    src="nft-image1.jpg"
+                                    src={props.image.replace("ipfs://", "https://ipfs.io/ipfs/")+"/virat%20kohli.png"}
                                     alt="NFT Image"
                                 />
                                 <div className="p-4">
@@ -25,7 +31,7 @@ export default function PlayerCard() {
                                     </a>
                                 </div>
                             </div>
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>

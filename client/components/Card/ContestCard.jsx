@@ -1,6 +1,73 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { ethers } from "ethers"
+import { useAccount } from 'wagmi'
+import {
+  prepareWriteContract,
+  readContract,
+  waitForTransaction,
+  writeContract,
+} from "wagmi/actions"
+import toast from "react-hot-toast";
+import { useRouter } from 'next/router'
 
-export default function ContestCard() {
+const abi = require("../../constants/abi.json")
+const bid = ethers.utils.parseEther("0.1")
+
+export default function ContestCard(props) {
+
+  const [conditionResult, setConditionResult] = useState(false);
+  const { address } = useAccount()
+  const router = useRouter()
+
+  const GameAddress = props.Game
+  const contractABI = JSON.parse(abi["Game"])
+
+  useEffect(() => {
+    isRegistered()
+  }, [address, conditionResult])
+
+  const isRegistered = async () => {
+    console.log(address)
+    const data = await readContract({
+      address: GameAddress,
+      abi: contractABI,
+      functionName: "s_buyercheck",
+      args: [address]
+    })
+    setConditionResult(data)
+  }
+
+  const register = async () => {
+    toast.dismiss("connecting");
+    toast.loading("Connecting with contract", {
+      id: "connect",
+    });
+    try {
+      const { request, result } = await prepareWriteContract({
+        address: GameAddress,
+        abi: contractABI,
+        functionName: "register",
+        value: bid
+      });
+
+      const { hash } = await writeContract(request);
+      await waitForTransaction({ hash });
+      toast.dismiss("connect");
+      toast.success("Successfully registered");
+      toast.custom("You'll be notified once approved", {
+        icon: "ℹ️",
+      });
+    } catch (err) {
+      toast.dismiss("connect");
+      console.error(err);
+      toast.error("Error connecting with contract");
+    }
+  }
+
+  const enter = () => {
+    router.push(`/contests/${GameAddress}`)
+  }
+
   return (
     <div className="py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-gray-800 rounded-lg shadow-lg overflow-hidden md:max-w-2xl">
@@ -52,9 +119,15 @@ export default function ContestCard() {
               </a>
             </div>
             <div className="mt-4">
-              <button className="bg-indigo-600 hover:bg-indigo-400 text-white font-medium py-2 px-4 rounded">
-                Register
-              </button>
+              {conditionResult ? (
+                <button className="bg-indigo-600 hover:bg-indigo-400 text-white font-medium py-2 px-4 rounded" onClick={enter}>
+                  Enter
+                </button>
+              ) : (
+                <button className="bg-indigo-600 hover:bg-indigo-400 text-white font-medium py-2 px-4 rounded" onClick={register}>
+                  Register
+                </button>
+              )}
             </div>
           </div>
         </div>
