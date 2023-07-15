@@ -26,7 +26,7 @@ const networkConfig = {
         keepersUpdateInterval: "30",
         callbackGasLimit: "600000", // 500,000 gas
         MockOracleAddress: "0x9774be70A8f50b88A44e4C2C83E14C5a43364A6f",
-        jobId: "67fb6a2c4fae411280a588009607f584",
+        jobId: "a246d7dda73841818fbd401d7d6e380c",
         LinkTokenAddress: "0x326C977E6efc84E512bB9C30f76E30c160eD06FB",
     }
 }

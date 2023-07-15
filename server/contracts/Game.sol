@@ -110,7 +110,7 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
         s_PICContract = IPIC(_PICAddress);
         s_totalplayerCount = s_PICContract.getTotalPlayers();
         s_unlock = false;
-        s_currentAuctionTime = block.timestamp + s_auctionTime - _auctionStartTime;
+        s_currentAuctionTime = block.timestamp - s_auctionTime + _auctionStartTime;
     }
 
     // ------------------------------------------------------------------------------------------------------
@@ -348,15 +348,6 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
         s_DreamToken[msg.sender] += amount;
     }
 
-    function convertDreamTokenToEth() public payable checklock {
-        uint256 amount = s_DreamToken[msg.sender];
-        s_DreamToken[msg.sender] = 0;
-        (bool success, ) = (msg.sender).call{value: amount * 1e15}("");
-        if (!success) {
-            revert TransferFailed();
-        }
-    }
-
     function withdrawWinnerFunds() public payable checklock {
         if (msg.sender != s_winner) {
             revert SenderIsNotWinner();
@@ -383,14 +374,6 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
     //                                          STATE VARIABLES
     // ------------------------------------------------------------------------------------------------------
 
-    function moneyspent(address _registrant) public view returns (uint256) {
-        uint256 sum = 0;
-        for (uint256 i = 0; i < s_BuyerTransactionCount[_registrant]; i++) {
-            sum += s_BuyerTransactions[_registrant][i].price;
-        }
-        return sum;
-    }
-
     function fetchPlayers(
         address _registrant
     ) public view returns (playerBought[] memory) {
@@ -404,6 +387,10 @@ contract Game is ChainlinkClient, AutomationCompatibleInterface, Ownable {
 
     function getTeamScore(address _registrant) public view returns (uint256) {
         return s_TeamScore[_registrant];
+    }
+
+    function getBuyers() public view returns (address[] memory) {
+        return s_buyers;
     }
 
     function getAuctionContract() public view returns (address) {

@@ -5,7 +5,7 @@ import "./interfaces/IPlayer.sol";
 contract PIC {
     uint256 private s_PlayerCount;
     address private owner;
-    IPlayer.PlayerQuery[] public s_PlayerStorage;
+    IPlayer.PlayerQuery[] private s_PlayerStorage;
 
     event PlayerUpdated(uint256 indexed tokenId);
 

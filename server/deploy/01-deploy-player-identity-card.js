@@ -7,11 +7,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const player = [{
         imageURI: "",
+        name: "",
         role: "",
         id: 0
     },
     {
         imageURI: "",
+        name: "",
         role: "",
         id: 1
     }]
