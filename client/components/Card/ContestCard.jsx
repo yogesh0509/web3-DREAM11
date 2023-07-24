@@ -9,13 +9,22 @@ import {
 } from "wagmi/actions"
 import toast from "react-hot-toast";
 import { useRouter } from 'next/router'
+import Countdown from 'react-countdown';
+// import { initializeApp } from "firebase/app";
+// import { getDatabase, ref, onValue } from "firebase/database";
+import {firebaseConfig} from "../../constants/firebaseConfig.js"
 
 const abi = require("../../constants/abi.json")
 const bid = ethers.utils.parseEther("0.1")
 
+// const app = initializeApp(firebaseConfig);
+// const db = getDatabase(app);
+
 export default function ContestCard(props) {
 
-  const [conditionResult, setConditionResult] = useState(false);
+  const [conditionResult, setConditionResult] = useState(false)
+  const [StartTime, setStartTime] = useState(0)
+  const [EndTime, setEndTime] = useState(0)
   const { address } = useAccount()
   const router = useRouter()
 
@@ -24,10 +33,33 @@ export default function ContestCard(props) {
 
   useEffect(() => {
     isRegistered()
+    updateUI()
   }, [address, conditionResult])
 
+  const updateUI = () => {
+    // onValue(ref(db, `/contests/${GameAddress}`), async (snapshot) => {
+    //   console.log(snapshot.val())
+    //   setStartTime(snapshot.val())
+
+    //   const totalPlayers = await readContract({
+    //     address: GameAddress,
+    //     abi: contractABI,
+    //     functionName: "s_totalplayerCount",
+    //   })
+
+    //   const auctionTime = await readContract({
+    //     address: GameAddress,
+    //     abi: contractABI,
+    //     functionName: "s_auctionTime",
+    //   })
+
+    //   setEndTime(snapshot.val() + parseInt(totalPlayers) * parseInt(auctionTime) * 2)
+    // }, {
+    //   onlyOnce: true
+    // });
+  }
+
   const isRegistered = async () => {
-    console.log(address)
     const data = await readContract({
       address: GameAddress,
       abi: contractABI,
@@ -57,9 +89,21 @@ export default function ContestCard(props) {
       toast.custom("You'll be notified once approved", {
         icon: "ℹ️",
       });
+
+      isRegistered()
     } catch (err) {
       toast.dismiss("connect");
       console.error(err);
+      const data = await readContract({
+        address: GameAddress,
+        abi: contractABI,
+        functionName: "s_auctionState",
+        args: [address]
+      })
+      console.log(data)
+      if(data){
+        toast.err("Either any auction is going on or all the auctions have already ended!!")
+      }
       toast.error("Error connecting with contract");
     }
   }
@@ -74,35 +118,27 @@ export default function ContestCard(props) {
         <div className="md:flex">
           <div className="md:flex-shrink-0">
             <img
-              className="h-48 w-full object-cover md:w-48"
-              src="contest-image.jpg"
+              className="h-48 w-full object-cover md:w-48 mt-8"
+              src="/assets/contest.png"
               alt="Contest Image"
             />
           </div>
           <div className="p-4">
-            <div className="uppercase tracking-wide text-sm text-indigo-500 font-semibold">
-              Contest
+            <div className="uppercase tracking-wide text-medium text-indigo-500 font-semibold">
+              Fee: 0.1 MATIC
             </div>
-            <a href="#" className="block mt-1 text-lg leading-tight font-medium text-white hover:underline">
-              Contest Title
-            </a>
             <p className="mt-2 text-gray-300">
-              Contest Description
+              Bidding battles and winning prizes through competitive auctions.
             </p>
-            <div className="mt-4">
-              <span className="inline-block bg-indigo-600 rounded-full px-3 py-1 text-sm font-semibold text-white mr-2">
-                Category
-              </span>
-              <span className="inline-block bg-indigo-600 rounded-full px-3 py-1 text-sm font-semibold text-white">
-                Duration
-              </span>
-            </div>
+
             <div className="mt-4">
               <span className="text-gray-400">
                 Start Date:
               </span>
               <span className="text-white ml-2">
-                Contest Start Date
+                <Countdown
+                  date={StartTime}
+                />
               </span>
             </div>
             <div className="mt-2">
@@ -110,7 +146,9 @@ export default function ContestCard(props) {
                 End Date:
               </span>
               <span className="text-white ml-2">
-                Contest End Date
+                <Countdown
+                  date={EndTime}
+                />
               </span>
             </div>
             <div className="mt-4">

@@ -1,39 +1,19 @@
-import React, { useEffect, useState } from "react";
-import Countdown from 'react-countdown';
+import React, { useEffect, useState, useContext } from "react";
+// import Countdown from 'react-countdown';
 import toast from "react-hot-toast";
 import { useRouter } from 'next/router'
 
-import { ethers } from "ethers"
 import { useAccount } from 'wagmi'
-import {
-    prepareWriteContract,
-    readContract,
-    waitForTransaction,
-    writeContract,
-} from "wagmi/actions"
+import { prepareWriteContract, readContract, waitForTransaction, writeContract } from "wagmi/actions"
 
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, child, push, update } from "firebase/database";
-import { useCookies } from 'react-cookie';
-import Typography from '@mui/material/Typography';
-import Timer from "../../../../components/Timer";
-import styles from "./Player.module.css"
+import firebase from 'firebase/app'
+// import { firebaseConfig } from "../../../../constants/firebaseConfig.js"
+import { ContractContext } from "../../../../context/ContractContext"
 
+// import Timer from "../../../../components/Timer";
 const abi = require("../../../../constants/abi.json")
 
-const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    databaseURL: "https://auctionhouse-7ca3f-default-rtdb.firebaseio.com",
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const ContractABI = JSON.parse(abi["Game"])
+const GamecontractABI = JSON.parse(abi["Game"])
 const PICcontractABI = JSON.parse(abi["PIC"])
 
 export function UpdateTx(props) {
@@ -43,7 +23,7 @@ export function UpdateTx(props) {
                 ? props.tx.map((tx, index) =>
                     <div className="flex items-center" key={index}>
                         <p className="mr-2">{tx.bidder}: </p>
-                        <p className="text-sm text-gray-400">{ethers.utils.formatEther(tx.bid, "ether")}ETH </p>
+                        <p className="text-sm text-gray-400">{tx.bid}DT </p>
                     </div>
                 )
                 : <></>}
@@ -51,52 +31,55 @@ export function UpdateTx(props) {
     )
 }
 
-export default function Player_details({ GameAddress, tokenId }) {
+export default function Player_details({ gameAddress, tokenId }) {
 
     const [isTransaction, setTransaction] = useState([])
     const [bid, setbid] = useState(0)
     const [Image, setImage] = useState("")
+    const [Name, setName] = useState("")
     const [AuctionTime, setAuctionTime] = useState(0)
-    const [CurrentPlayer, setCurrentPlayer] = useState(0)
 
     const { address } = useAccount()
-    const [cookies, setCookie] = useCookies(['time']);
-    const [cookiesState, setCookieState] = useCookies(['state']);
+    const [account] = useState(address)
+    const router = useRouter()
+    const { PICAddress, PICAddresssetup, fetchTokens, currentPlayer, fetchcurrentPlayer } = useContext(ContractContext)
+    const Ref = firebase.database().ref(`${gameAddress}`)
 
     useEffect(() => {
         const fetchImage = async () => {
-            let data = await readContract({
-                address: GameAddress,
-                abi: ContractABI,
-                functionName: "getPICContract"
-            })
-            const PICAddress = data;
 
-            data = await readContract({
-                address: PICAddress,
-                abi: PICcontractABI,
-                functionName: "getplayerDetails",
-                args: [tokenId]
-            })
-            console.log(data)
-            setImage(data.imageURI)
+            await PICAddresssetup(gameAddress)
+            await fetchcurrentPlayer(gameAddress)
+            await fetchTokens(gameAddress, address)
 
-            data = await readContract({
-                address: GameAddress,
-                abi: ContractABI,
+            if (PICAddress) {
+                const data = await readContract({
+                    address: PICAddress,
+                    abi: PICcontractABI,
+                    functionName: "getplayerDetails",
+                    args: [tokenId]
+                })
+                setImage(data.imageURI)
+                setName(data.name)
+            }
+            const data = await readContract({
+                address: gameAddress,
+                abi: GamecontractABI,
                 functionName: "s_auctionTime"
             })
-            console.log(data)
             setAuctionTime(parseInt(data))
         }
         fetchImage()
-    }, [])
+    }, [PICAddress, currentPlayer, fetchTokens])
 
     useEffect(() => {
-        if (address) {
-            updateUIvalues()
-        }
-    }, [address, isTransaction])
+        updateUIvalues()
+    }, [isTransaction, bid])
+
+    useEffect(() => {
+        if (account != address)
+            router.push("/")
+    }, [address])
 
     const bidAuctionFunction = async () => {
 
@@ -106,8 +89,8 @@ export default function Player_details({ GameAddress, tokenId }) {
         });
         try {
             const { request, result } = await prepareWriteContract({
-                address: GameAddress,
-                abi: ContractABI,
+                address: gameAddress,
+                abi: GamecontractABI,
                 functionName: "bid",
             });
 
@@ -134,43 +117,61 @@ export default function Player_details({ GameAddress, tokenId }) {
             bid: bid
 
         }
-        // const newPostKey = push(child(ref(db), `transaction`)).key
-        const updates = {};
 
-        onValue(ref(db, `/${tokenId}`), (snapshot) => {
-            if (snapshot.val() == null) {
-                updates[tokenId] = [postData]
-            }
-            else {
-                updates[tokenId] = snapshot.val()
-                updates[tokenId].push(postData)
-            }
-            return update(ref(db), updates);
-        }, {
-            onlyOnce: true
-        });
+        Ref.once('value')
+            .then((snapshot) => {
+                const data = snapshot.val();
+                console.log("Data at path 'xyz':", data);
+
+                // Modify the data (for example, update 'key2')
+                const newData = {
+                    ...data,
+                    postData // Modify 'key2' with a new value
+                };
+
+                // Update data at path 'xyz'
+                return Ref.update(newData);
+            })
+            .then(() => {
+                console.log("Data updated successfully!");
+            })
+            .catch((error) => {
+                console.error("Firebase error:", error);
+            });
+        // const newPostKey = push(child(ref(db), `transaction`)).key
+        // const updates = {};
+
+        // onValue(ref(db, `/${gameAddress}/${tokenId}`), (snapshot) => {
+        //     if (snapshot.val() == null) {
+        //         updates[tokenId] = [postData]
+        //     }
+        //     else {
+        //         updates[tokenId] = snapshot.val()
+        //         updates[tokenId].push(postData)
+        //     }
+        //     return update(ref(db), updates);
+        // }, {
+        //     onlyOnce: true
+        // });
     }
 
     const updateUIvalues = async () => {
-        onValue(ref(db, `/${tokenId}`), (snapshot) => {
-            setTransaction(snapshot.val())
-        }, {
-            onlyOnce: true
-        });
+        Ref.once('value')
+            .then((snapshot) => {
+                const data = snapshot.val()
+                console.log(data)
+                setTransaction(snapshot.val())
+            })
+            .catch((error) => {
+                console.error("Firebase error:", error);
+            });
 
-        let data = await readContract({
-            address: GameAddress,
-            abi: ContractABI,
+        const data = await readContract({
+            address: gameAddress,
+            abi: GamecontractABI,
             functionName: "s_biddingPrice"
         })
         setbid(parseInt(data))
-
-        data = await readContract({
-            address: GameAddress,
-            abi: ContractABI,
-            functionName: "s_currentplayercount"
-        })
-        setCurrentPlayer(parseInt(data))
     }
 
     function highestBid() {
@@ -189,66 +190,44 @@ export default function Player_details({ GameAddress, tokenId }) {
         <div className="bg-neutral-900 text-white min-h-screen">
             <div className="container mx-auto my-auto px-4 py-8 flex flex-col md:flex-row">
                 <div className="md:w-1/2">
-                    {address && tokenId == CurrentPlayer
+                    {/* {address && tokenId == currentPlayer
                         ? <Countdown
-                            date={parseInt(cookies.time) + AuctionTime * 1000}
+                            date={parseInt(localStorage.getItem('time')) + AuctionTime * 1000}
                             renderer={props =>
                                 <Timer minutes={props.minutes} seconds={props.seconds} />
                             } />
-                        : <></>}
-                    <img src={Image.replace("ipfs://", "https://ipfs.io/ipfs/") + "/virat%20kohli.png"} alt="Player" className="w-full h-auto" />
+                        : <></>} */}
+                    <img src={Image.replace("ipfs://", "https://ipfs.io/ipfs/") + "/" + Name.split(' ').join('%20') + ".png"} alt="Player" className="w-50 h-50" />
                 </div>
                 <div className="md:w-1/2 mt-8 md:mt-0">
                     <div className="flex flex-col justify-center items-center">
-                        <h2 className="text-2xl font-bold mb-4">Virat Kohli</h2>
-                        <p className="text-lg mb-4">Current Bid: {ethers.utils.formatEther(highestBid(), "ether")}ETH</p>
+                        <h2 className="text-2xl font-bold mb-4">{Name.toUpperCase()}</h2>
+                        <p className="text-lg mb-4">Current Bid: {highestBid()}DT</p>
                         <div className="text-white p-4 max-h-72 overflow-y-auto">
                             <div className="flex flex-col space-y-1">
                                 <UpdateTx tx={isTransaction} />
                             </div>
                         </div>
-                        <button className="bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded mt-4"
+                        <button className="bg-red-500 text-white py-2 px-4 rounded mt-4"
                             onClick={bidAuctionFunction}
-                            disabled={tokenId != CurrentPlayer || cookiesState.state == "true"}>
-                            {tokenId < CurrentPlayer ? "SOLD OUT" : "BID"}
+                            disabled={tokenId != currentPlayer || localStorage.getItem('state') == "true"}>
+                            {tokenId < currentPlayer ? "SOLD OUT" : "BID"}
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-        // <div className="max-w-4xl w-full mx-auto my-8 shadow-md">
-        //     {address && tokenId == CurrentPlayer
-        //         ? <Countdown
-        //             date={parseInt(cookies.time) + AuctionTime * 1000}
-        //             renderer={props =>
-        //                 <Timer minutes={props.minutes} seconds={props.seconds} />
-        //             } />
-        //         : <></>}
-
-        //     <div className={styles.details}>
-        //         <div className={styles.big_img}>
-        //             <img src={Image.replace("ipfs://", "https://ipfs.io/ipfs/") + "/virat%20kohli.png"} alt="" className={tokenId != CurrentPlayer ? styles.parent_img_sold : styles.parent_img} />
-        //             {tokenId < CurrentPlayer
-        //                 ? <div className={styles.image_over}><img className={styles.icon_img} src="/sold.png" /></div>
-        //                 : tokenId > CurrentPlayer
-        //                     ? <div className={styles.image_over}><img className={styles.icon_img} src="/soon.png" /></div>
-        //                     : <></>
-        //             }
-        //         </div>
-        //     </div>
-        // </div>
     )
 }
 
 export async function getServerSideProps(context) {
 
-    const GameAddress = context.params.gameAddress
+    const gameAddress = context.params.gameAddress
     const ID = context.params.tokenId
-    console.log(GameAddress, ID)
 
     return {
         props: {
-            GameAddress: GameAddress,
+            gameAddress: gameAddress,
             tokenId: ID
         }
     };

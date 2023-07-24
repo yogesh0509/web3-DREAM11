@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Wrapper from "../Wrapper";
 import ConnectWallet from "../Button/ConnectWallet";
 import { Drawer } from "@mui/material";
+import { ContractContext } from "../../context/ContractContext"
 
-const Navbar = ({ className }) => {
+const Navbar = ({ className, dt }) => {
   const [show, setScroll] = useState("");
   const [link, setLink] = useState("text-white");
   const [open, setOpen] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const { dreamToken } = useContext(ContractContext);
+
   const handleScroll = () => {
     if (window.scrollY > 150) {
       setScroll("top-0 bg-white text-black shadow-md transalate-y-0");
@@ -56,28 +59,37 @@ const Navbar = ({ className }) => {
           >
             HOW TO PLAY
           </Link>
-          <Link
-            href="#projects"
-            scroll
-            className="hover:scale-105 transition duration-300"
-          >
-            CONTESTS
-          </Link>
-          <Link
-            href="#faqs"
-            scroll
-            className="hover:scale-105 transition duration-300"
-          >
-            FAQ
-          </Link>
+          {dt
+            ?
+            <div
+              className="hover:scale-105 transition duration-300 font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600"
+            >{dreamToken}</div>
+            :
+            <>
+              <Link
+                href="#projects"
+                scroll
+                className="hover:scale-105 transition duration-300"
+              >
+                CONTESTS
+              </Link>
+              <Link
+                href="#faqs"
+                scroll
+                className="hover:scale-105 transition duration-300"
+              >
+                FAQ
+              </Link>
+            </>
+          }
         </div>
+
         <section className="flex">
-          <Link
-            href="/"
+          <div
             className="bg-gradient-to-r from-[#4dbc5d] to-[#00a694] hover:scale-95 transition duration-300 px-3 py-2 rounded-lg text-white"
           >
             <ConnectWallet />
-          </Link>
+          </div>
         </section>
         {/* Add responsive navbar button for smaller screens */}
         <div className="md:hidden">

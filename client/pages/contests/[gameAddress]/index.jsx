@@ -1,49 +1,69 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react"
 import { useRouter } from 'next/router'
-import {
-  readContract
-} from "wagmi/actions"
-import { useAccount } from "wagmi"
+import { readContract } from "wagmi/actions"
+import { useAccount, useContractEvent } from "wagmi"
+import { ContractContext } from "../../../context/ContractContext"
+import PlayerCard from "../../../components/Card/PlayerCard"
 
-import PlayerCard from "../../../components/Card/PlayerCard";
 const abi = require("../../../constants/abi.json")
 
-export default function IndexPage({ GameAddress }) {
+export default function IndexPage({ gameAddress }) {
 
   const { address } = useAccount()
+  const [account] = useState(address)
   const [Players, setPlayers] = useState([])
-  const [account, setAccount] = useState(address)
-
   const router = useRouter()
+  const { PICAddress, PICAddresssetup, fetchTokens, currentPlayer, fetchcurrentPlayer } = useContext(ContractContext);
 
   const PICcontractABI = JSON.parse(abi["PIC"])
   const GamecontractABI = JSON.parse(abi["Game"])
 
   useEffect(() => {
-    fetchPlayers()
-  }, [])
+    const func = async () => {
+      await PICAddresssetup(gameAddress)
+      await fetchcurrentPlayer(gameAddress)
+      await fetchTokens(gameAddress, address)
+      if(PICAddress)
+        await fetchPlayers()
+    }
+    func()
+  }, [PICAddress])
 
   useEffect(() => {
-    if (account != address) {
+    if (account != address)
       router.push("/")
-    }
   }, [address])
 
-  const fetchPlayers = async () => {
-    let data = await readContract({
-      address: GameAddress,
-      abi: GamecontractABI,
-      functionName: "getPICContract"
-    })
-    const PICAddress = data;
+  useContractEvent({
+    address: gameAddress,
+    abi: GamecontractABI,
+    eventName: 'AuctionStarted',
+    listener(log) {
+      console.log(log)
+      localStorage.setItem('time', Date.now())
+      localStorage.setItem('state', 'false')
+    },
+  })
 
-    data = await readContract({
+  useContractEvent({
+    address: gameAddress,
+    abi: GamecontractABI,
+    eventName: 'AuctionEnded',
+    listener(log) {
+      console.log(log)
+      localStorage.setItem('time', Date.now())
+      localStorage.setItem('state', 'true')
+    },
+  })
+
+  const fetchPlayers = async () => {
+    let arr = []
+    let data = await readContract({
       address: PICAddress,
       abi: PICcontractABI,
       functionName: "getTotalPlayers"
     })
-    const count = parseInt(data);
-    let arr = []
+    const count = parseInt(data)
     for (let i = 0; i < count; i++) {
       data = await readContract({
         address: PICAddress,
@@ -53,8 +73,8 @@ export default function IndexPage({ GameAddress }) {
       })
       arr.push(data)
     }
-    console.log(arr)
     setPlayers(arr)
+    console.log(arr)
   }
 
   return (
@@ -62,7 +82,7 @@ export default function IndexPage({ GameAddress }) {
       <div className="max-w-4xl mx-auto">
         <div className="grid gap-6 grid-cols-1 md:grid-cols-3 lg:grid-cols-3">
           {Players.map((ele, index) => (
-            < PlayerCard GameAddress={GameAddress} image={ele.imageURI} id={index} key={ele.id} />
+            < PlayerCard key={ele.id} image={ele.imageURI} id={index} role={ele.role} name={ele.name} currentPlayer={currentPlayer}/>
           ))}
         </div>
       </div>
@@ -72,19 +92,11 @@ export default function IndexPage({ GameAddress }) {
 
 export async function getServerSideProps(context) {
 
-  const GameAddress = context.params.gameAddress
+  const gameAddress = context.params.gameAddress
 
-  // functionName = "getCurrentPlayerCount"
-  // const res = await Moralis.EvmApi.utils.runContractFunction({
-  //   abi,
-  //   functionName,
-  //   address,
-  //   chain: EvmChain.MUMBAI,
-  // });
-  // const curr_auction_player = res.result
   return {
     props: {
-      GameAddress: GameAddress
+      gameAddress: gameAddress
     },
   };
 }

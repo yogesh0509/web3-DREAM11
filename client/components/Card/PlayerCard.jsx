@@ -2,10 +2,11 @@ import React from "react";
 import { useRouter } from 'next/router'
 
 export default function PlayerCard(props) {
-    console.log(props)
     const router = useRouter()
-    const playerDetails = ()=>{
-        router.push(`${props.GameAddress}/player-details/${props.id}`)
+    const { query } = router
+
+    const playerDetails = () => {
+        router.push(`${query.gameAddress}/player-details/${props.id}`)
     }
     return (
         <div className="py-6 px-4 sm:px-6 lg:px-8">
@@ -16,19 +17,19 @@ export default function PlayerCard(props) {
                             <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
                                 <img
                                     className="w-full h-64 object-cover"
-                                    src={props.image.replace("ipfs://", "https://ipfs.io/ipfs/")+"/virat%20kohli.png"}
+                                    src={props.image.replace("ipfs://", "https://ipfs.io/ipfs/") + "/" + props.name.split(' ').join('%20') + ".png"}
                                     alt="NFT Image"
                                 />
                                 <div className="p-4">
                                     <p className="text-lg text-white font-medium">
-                                        NFT Title
+                                        {props.name.toUpperCase()}
                                     </p>
                                     <p className="mt-2 text-gray-300">
-                                        NFT Description
+                                        {props.role.toUpperCase()}
                                     </p>
-                                    <a href="/nft-details" className="mt-4 inline-block bg-indigo-600 hover:bg-indigo-400 text-white font-medium py-2 px-4 rounded">
-                                        View Details
-                                    </a>
+                                    <div className={`mt-4 inline-block ${props.id < props.currentPlayer ? "bg-red-400" : "bg-indigo-600"} text-white font-medium py-2 px-4 rounded`}>
+                                        {props.id < props.currentPlayer ? "SOLD OUT" : "BID"}
+                                    </div>
                                 </div>
                             </div>
                         </button>

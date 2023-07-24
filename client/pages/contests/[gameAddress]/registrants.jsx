@@ -1,9 +1,67 @@
-// import Moralis from 'moralis';
-// import { EvmChain } from '@moralisweb3/evm-utils';
-import Table from "../components/Table";
-const ContractAbi = require("../constants/ContractAbi.json")
+import React, { useEffect, useState } from "react"
+import { useRouter } from 'next/router'
+import {
+    readContract
+} from "wagmi/actions"
+import { useAccount } from "wagmi"
 
-export default function Registrants({ registrants, numPlayerPurchased, moneyspent, count, playersBought, withdrawableAmount, winner, winnerAmount }) {
+import Table from "../.../../components/Table"
+const abi = require("../../../constants/abi.json")
+
+export default function Registrants({ GameAddress }) {
+
+    const { address } = useAccount()
+    const [account] = useState(address)
+    const router = useRouter()
+    const GamecontractABI = JSON.parse(abi["Game"])
+
+    const [registrants, setregistrants] = useState([])
+    const [numPlayerPurchased, setnumPlayerPurchased] = useState([])
+    const [playersBought, setplayersBought] = useState([])
+
+    useEffect(() => {
+        fetchLeaderboard()
+    }, [])
+
+    useEffect(() => {
+        if (account != address)
+            router.push("/")
+    }, [address])
+
+    const fetchLeaderboard = async () => {
+        let response
+        let count = [], player_details = []
+
+        let data = await readContract({
+            address: GameAddress,
+            abi: GamecontractABI,
+            functionName: "getBuyers"
+        })
+        setregistrants(data)
+        const arr = data
+
+        for (let player of arr) {
+            data = await readContract({
+                address: GameAddress,
+                abi: GamecontractABI,
+                functionName: "s_BuyerTransactionCount",
+                args: [player]
+            })
+            count.push(data)
+
+            response = await readContract({
+                address: GameAddress,
+                abi: GamecontractABI,
+                functionName: "fetchPlayers",
+                args: [player]
+            })
+            count.push(data)
+            player_details.push(response)
+        }
+        setnumPlayerPurchased(count)
+        setplayersBought(player_details)
+    }
+
     return (
         <>
             <br />
@@ -14,13 +72,15 @@ export default function Registrants({ registrants, numPlayerPurchased, moneyspen
                 count={count}
                 playersBought={playersBought}
                 withdrawableAmount={withdrawableAmount}
-                winner={winner} 
+                winner={winner}
                 winnerAmount={winnerAmount} />
         </>
     )
 }
 
 export async function getServerSideProps(context) {
+
+    const GameAddress = context.params.gameAddress
     // await Moralis.start({ apiKey: process.env.MORALIS_API_KEY });
 
     // let abi = JSON.parse(ContractAbi["Marketplace"])
@@ -125,12 +185,13 @@ export async function getServerSideProps(context) {
 
     return {
         props: {
+            GameAddress: GameAddress,
             registrants: "",
             numPlayerPurchased: "numPlayerPurchased",
             moneyspent: "moneyspent",
             count: "",
             playersBought: "playersBought",
-            withdrawableAmount: "withdrawableAmount", 
+            withdrawableAmount: "withdrawableAmount",
             winner: "winner",
             winnerAmount: "winnerAmount"
         },

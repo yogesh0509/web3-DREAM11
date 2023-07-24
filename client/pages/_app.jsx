@@ -1,98 +1,63 @@
-import React from "react";
-import '../styles/globals.css';
-import "@rainbow-me/rainbowkit/styles.css";
-
-import {
-    RainbowKitProvider,
-    getDefaultWallets,
-    connectorsForWallets,
-} from "@rainbow-me/rainbowkit";
-import { configureChains, createConfig, WagmiConfig } from "wagmi";
-import { polygonMumbai } from "wagmi/chains";
-import { publicProvider } from "wagmi/providers/public";
+import React from "react"
+import '../styles/globals.css'
+import "@rainbow-me/rainbowkit/styles.css"
+import { RainbowKitProvider, getDefaultWallets, connectorsForWallets } from "@rainbow-me/rainbowkit"
+import { configureChains, createConfig, WagmiConfig } from "wagmi"
+import { polygonMumbai } from "wagmi/chains"
+import { publicProvider } from "wagmi/providers/public"
 import { alchemyProvider } from 'wagmi/providers/alchemy'
 
-import { Toaster } from "react-hot-toast";
-import { CookiesProvider } from 'react-cookie';
-import { MutatingDots } from "react-loader-spinner";
+import { Toaster } from "react-hot-toast"
+import { MutatingDots } from "react-loader-spinner"
+import { MyProvider } from "../context/ContractContext"
 
-import Navbar from "../components/Navbar/Navbar";
+import firebase from 'firebase/app'
+import 'firebase/database'
+import { firebaseConfig } from "../constants/firebaseConfig.js"
+
+import Navbar from "../components/Navbar/Navbar"
 
 const { chains, publicClient, webSocketPublicClient } = configureChains(
     [polygonMumbai],
     [alchemyProvider({ apiKey: process.env.NEXT_PUBLIC_ALCHEMY_KEY }), publicProvider()]
-);
+)
 
-const projectId = "e2126c812a5444455d0d8a781049a86f";
+const projectId = "e2126c812a5444455d0d8a781049a86f"
 
 const { wallets } = getDefaultWallets({
     appName: "web3-DREAM11",
     projectId,
     chains,
-});
+})
 
 const demoAppInfo = {
     appName: "web3-DREAM11",
-};
+}
 
-const connectors = connectorsForWallets([...wallets]);
+const connectors = connectorsForWallets([...wallets])
 
 const wagmiConfig = createConfig({
     autoConnect: true,
     connectors,
     publicClient,
     webSocketPublicClient,
-});
+})
 
-// const ethers = require("ethers")
-// const ContractAbi = require("../constants/ContractAbi.json")
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 
-export default function MyApp({ Component, pageProps }) {
+export default function MyApp({ Component, pageProps, router }) {
+    const { pathname } = router
+    const shouldRenderComponent = pathname !== '/'
 
-    const [ready, setReady] = React.useState(false);
+    const [ready, setReady] = React.useState(false)
     React.useEffect(() => {
-        setReady(true);
-    }, []);
-
-    // const [cookies, setCookie] = useCookies(['time']);
-    // const [cookiesState, setCookieState] = useCookies(['state']);
-
-    // let address = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS;
-    // let abi = JSON.parse(ContractAbi["Marketplace"])
-    // const provider = new ethers.providers.WebSocketProvider(
-    //     `wss://young-warmhearted-ensemble.matic-testnet.discover.quiknode.pro/${process.env.NEXT_PUBLIC_INFURA_KEY}/`
-    // );
-    // const contract = new ethers.Contract(address, abi, provider);
-
-    // contract.on("AuctionStarted", (from, to, value, event) => {
-    //     let transferEvent = {
-    //         from: from,
-    //         to: to,
-    //         value: value,
-    //         eventData: event,
-    //     }
-    //     let time = Date.now()
-    //     let flag = false
-    //     setCookie('time', time, { path: '/' })
-    //     setCookieState('state', flag, { path: '/' })
-    // })
-
-    // contract.on("AuctionEnded", (from, to, value, event) => {
-    //     let transferEvent = {
-    //         from: from,
-    //         to: to,
-    //         value: value,
-    //         eventData: event,
-    //     }
-    //     let time = Date.now()
-    //     let flag = true
-    //     setCookie('time', time, { path: '/' })
-    //     setCookieState('state', flag, { path: '/' })
-
-    // })
+        setReady(true)
+    }, [])
 
     return (
-        <CookiesProvider>
+        <MyProvider>
             <div>
                 {ready ? (
                     <WagmiConfig config={wagmiConfig}>
@@ -102,7 +67,7 @@ export default function MyApp({ Component, pageProps }) {
                             modalSize="compact"
                         >
                             <Toaster position="top-center" reverseOrder={false} />
-                            <Navbar />
+                            {shouldRenderComponent ? <Navbar dt={true} /> : <Navbar />}
                             <Component {...pageProps} />
                         </RainbowKitProvider>
                     </WagmiConfig>
@@ -122,6 +87,6 @@ export default function MyApp({ Component, pageProps }) {
                     </div>
                 )}
             </div>
-        </CookiesProvider>
+        </MyProvider>
     )
 }
