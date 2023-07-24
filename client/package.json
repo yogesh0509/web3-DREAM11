@@ -54,6 +54,7 @@
     ]
   },
   "devDependencies": {
-    "@next/eslint-plugin-next": "^13.2.4"
+    "@next/eslint-plugin-next": "^13.2.4",
+    "eslint": "^8.45.0"
   }
 }

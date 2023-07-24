@@ -5,7 +5,7 @@ import {
 } from "wagmi/actions"
 import { useAccount } from "wagmi"
 
-import Table from "../.../../components/Table"
+// import Table from "../.../../components/Table"
 const abi = require("../../../constants/abi.json")
 
 export default function Registrants({ GameAddress }) {
@@ -65,7 +65,7 @@ export default function Registrants({ GameAddress }) {
     return (
         <>
             <br />
-            <Table
+            {/* <Table
                 registrants={registrants}
                 numPlayerPurchased={numPlayerPurchased}
                 moneyspent={moneyspent}
@@ -73,7 +73,7 @@ export default function Registrants({ GameAddress }) {
                 playersBought={playersBought}
                 withdrawableAmount={withdrawableAmount}
                 winner={winner}
-                winnerAmount={winnerAmount} />
+                winnerAmount={winnerAmount} /> */}
         </>
     )
 }
