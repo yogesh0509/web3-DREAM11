@@ -1,0 +1,60 @@
+{
+  "name": "web3-dream11",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.10.9",
+    "@mui/material": "^5.13.2",
+    "@rainbow-me/rainbowkit": "^1.0.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "autoprefixer": "^10.4.14",
+    "dotenv": "^16.0.3",
+    "firebase": "^8.6.8",
+    "framer": "^2.3.0",
+    "motion": "^10.15.5",
+    "next": "13.4.2",
+    "postcss": "8.4.23",
+    "react": "^18.2.0",
+    "react-cookie": "^4.1.1",
+    "react-countdown": "^2.3.5",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^4.9.0",
+    "react-loader-spinner": "^5.3.4",
+    "tailwindcss": "3.3.2",
+    "typescript": "*",
+    "wagmi": "^1.0.2"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "start": "next start",
+    "build": "next build",
+    "lint": "next lint"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "^13.2.4",
+    "eslint": "^8.45.0"
+  }
+}
