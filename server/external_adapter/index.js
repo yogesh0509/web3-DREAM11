@@ -1,8 +1,11 @@
-const { Requester, Validator } = require('@chainlink/external-adapter')
+const { Requester } = require('@chainlink/external-adapter')
 const { ethers } = require("ethers");
-require('dotenv').config()
 
-const address = process.env.MUMBAI_CONTRACT_ADDRESS
+require('dotenv').config()
+const provider = new ethers.providers.WebSocketProvider(
+  `wss://young-warmhearted-ensemble.matic-testnet.discover.quiknode.pro/${process.env.INFURA_KEY}/`
+)
+const abi = require("./constants/abi.json")
 
 // Define custom error scenarios for the API.
 // Return true for the adapter to retry.
@@ -11,23 +14,15 @@ const customError = (data) => {
   return false
 }
 
-// Define custom parameters to be used by the adapter.
-// Extra parameters can be stated in the extra object,
-// with a Boolean value indicating whether or not they
-// should be required.
-
 const createRequest = async (input, callback) => {
 
-  // The Validator helps you validate the Chainlink request data
-  const jobRunID = input
-  let tokenId = String(input)
-  const response = await Moralis.EvmApi.nft.getNFTMetadata({
-    address,
-    chain,
-    tokenId,
-  });
+  const jobRunID = input.data
+  const tokenId = String(input.id)
+  const contractABI = JSON.parse(abi["PIC"])
 
-  const playerId = response.result.metadata.attributes[2].value
+  const contract = new ethers.Contract(input.address, contractABI, provider);
+  const res = await contract.getplayerDetails(tokenId)
+  const playerId = parseInt(res.id)
   const url = `https://unofficial-cricbuzz.p.rapidapi.com/players/get-info`
   const headers = {
     'X-RapidAPI-Key': '673075d6ebmshf9d93a82582ea4fp1bfa13jsndc6cd297a25f',
@@ -47,7 +42,7 @@ const createRequest = async (input, callback) => {
     headers,
     params
   }
-  const role = response.result.metadata.attributes[1].value
+  const role = res.role
   // The Requester allows API calls be retry in case of timeout
   // or connection failure
   Requester.request(config, customError)
