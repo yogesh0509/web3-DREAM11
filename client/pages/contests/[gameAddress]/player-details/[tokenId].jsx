@@ -20,12 +20,12 @@ export function UpdateTx(props) {
     return (
         <>
             {props.tx
-                ? props.tx.map((tx, index) =>
-                    <div className="flex items-center" key={index}>
-                        <p className="mr-2">{tx.bidder}: </p>
-                        <p className="text-sm text-gray-400">{tx.bid}DT </p>
-                    </div>
-                )
+                ?
+                <div className="flex items-center">
+                    <p className="mr-2">{props.tx.bidder}: </p>
+                    <p className="text-sm text-gray-400">{props.tx.bid}DT </p>
+                </div>
+
                 : <></>}
         </>
     )
@@ -43,7 +43,7 @@ export default function Player_details({ gameAddress, tokenId }) {
     const [account] = useState(address)
     const router = useRouter()
     const { PICAddress, PICAddresssetup, fetchTokens, currentPlayer, fetchcurrentPlayer } = useContext(ContractContext)
-    const Ref = firebase.database().ref(`${gameAddress}`)
+    const Ref = firebase.database().ref(`${gameAddress}/${tokenId}`)
 
     useEffect(() => {
         const fetchImage = async () => {
@@ -115,13 +115,11 @@ export default function Player_details({ gameAddress, tokenId }) {
         const postData = {
             bidder: bidder,
             bid: bid
-
         }
 
         Ref.once('value')
             .then((snapshot) => {
                 const data = snapshot.val();
-                console.log("Data at path 'xyz':", data);
 
                 // Modify the data (for example, update 'key2')
                 const newData = {
@@ -158,9 +156,7 @@ export default function Player_details({ gameAddress, tokenId }) {
     const updateUIvalues = async () => {
         Ref.once('value')
             .then((snapshot) => {
-                const data = snapshot.val()
-                console.log(data)
-                setTransaction(snapshot.val())
+                setTransaction(snapshot.val().postData)
             })
             .catch((error) => {
                 console.error("Firebase error:", error);
@@ -175,15 +171,16 @@ export default function Player_details({ gameAddress, tokenId }) {
     }
 
     function highestBid() {
-        let max = 0;
-        if (isTransaction && isTransaction.length > 0) {
-            for (let ele of isTransaction) {
-                if (ele.bid > max) {
-                    max = ele.bid;
-                }
-            }
-        }
-        return max;
+        // let max = 0;
+        // if (isTransaction && isTransaction.length > 0) {
+        //     for (let ele of isTransaction) {
+        //         if (ele.bid > max) {
+        //             max = ele.bid;
+        //         }
+        //     }
+        // }
+        // return max;
+        return isTransaction.bid
     }
 
     return (
@@ -197,7 +194,7 @@ export default function Player_details({ gameAddress, tokenId }) {
                                 <Timer minutes={props.minutes} seconds={props.seconds} />
                             } />
                         : <></>} */}
-                    <img src={Image.replace("ipfs://", "https://ipfs.io/ipfs/") + "/" + Name.split(' ').join('%20') + ".png"} alt="Player" className="w-50 h-50" />
+                    <img src={Image.replace("ipfs://", "https://ipfs.io/ipfs/") + "/" + Name.split(' ').join('%20') + ".png"} alt="Player" className="w-3/4" />
                 </div>
                 <div className="md:w-1/2 mt-8 md:mt-0">
                     <div className="flex flex-col justify-center items-center">
@@ -209,8 +206,8 @@ export default function Player_details({ gameAddress, tokenId }) {
                             </div>
                         </div>
                         <button className="bg-red-500 text-white py-2 px-4 rounded mt-4"
-                            onClick={bidAuctionFunction}
-                            disabled={tokenId != currentPlayer || localStorage.getItem('state') == "true"}>
+                            onClick={bidAuctionFunction}>
+                            {/* disabled={tokenId != currentPlayer || localStorage.getItem('state') == "true"} */}
                             {tokenId < currentPlayer ? "SOLD OUT" : "BID"}
                         </button>
                     </div>

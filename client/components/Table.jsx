@@ -1,33 +1,26 @@
 import * as React from 'react';
-import { ethers } from 'ethers';
-import { useNotification } from "web3uikit"
-import { useWeb3Contract, useMoralis } from "react-moralis";
-import Box from '@mui/material/Box';
-import Collapse from '@mui/material/Collapse';
-import IconButton from '@mui/material/IconButton';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import Button from '@mui/material/Button';
-import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
+import toast from "react-hot-toast";
 
-import styles from "./Table.module.css"
-const ContractAbi = require("../constants/ContractAbi.json")
+import { ethers } from 'ethers';
+import { useRouter } from 'next/router'
+import Image from "next/image"
+
+import { useAccount } from 'wagmi'
+import { prepareWriteContract, readContract, waitForTransaction, writeContract } from "wagmi/actions"
+
+import { Box, Collapse, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper, Button } from '@mui/material';
+import { KeyboardArrowDown as KeyboardArrowDownIcon, KeyboardArrowUp as KeyboardArrowUpIcon } from '@mui/icons-material';
+import { MilitaryTech as MilitaryTechIcon } from '@mui/icons-material';
+
+const abi = require("../constants/abi.json")
 
 function createData(name, calories, fat, carbs, playersBought) {
   let arr = []
   for (let player of playersBought) {
     arr.push({
-      date: player[0],
-      customerId: `https://testnets.opensea.io/assets/mumbai/${process.env.NEXT_PUBLIC_IDENTITYNFT_CONTRACT_ADDRESS}/${player[0]}`,
-      amount: player[1]
+      date: player.player.name,
+      customerId: parseInt(player.player.id),
+      amount: parseInt(player.price)
     })
   }
   return {
@@ -40,90 +33,77 @@ function createData(name, calories, fat, carbs, playersBought) {
 }
 
 function Row(props) {
-  const { account } = useMoralis();
-  const { row } = props;
-  const [open, setOpen] = React.useState(false);
-
-  const abi = JSON.parse(ContractAbi["AuctionHouse"])
-  const abiMarketplace = JSON.parse(ContractAbi["Marketplace"])
-  const AuctionHouseAddress = process.env.NEXT_PUBLIC_AUCTIONHOUSE_CONTRACT_ADDRESS
-  const MarketplaceAddress = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS
-
-  const dispatch = useNotification();
-
-  const handleSuccessNotification = (msg) => {
-    dispatch({
-      type: "success",
-      message: msg,
-      title: "Transaction Notification",
-      position: "topR",
-    })
-  }
-
-  const handleErrorNotification = () => {
-    dispatch({
-      type: "error",
-      message: "Error!",
-      title: "Error",
-      position: "topR",
-    })
-  }
-
-  const { runContractFunction: withdraw,
-    isLoading,
-    isFetching, } = useWeb3Contract({
-      abi: abi,
-      contractAddress: AuctionHouseAddress,
-      functionName: "withdraw",
-      params: {}
-    })
-
-  const { runContractFunction: withdrawWinnerFunds,
-    isLoadingWinner,
-    isFetchingWinner, } = useWeb3Contract({
-      abi: abiMarketplace,
-      contractAddress: MarketplaceAddress,
-      functionName: "withdrawWinnerFunds",
-      params: {}
-    })
+  const { address } = useAccount()
+  const router = useRouter()
+  const { query } = router
+  const { row } = props
+  const [open, setOpen] = React.useState(false)
+  const GamecontractABI = JSON.parse(abi["Game"])
+  const gameAddress = query.gameAddress
 
   const handleWithdraw = async (event) => {
-    let current_account = event.target.parentNode.previousSibling.previousSibling.previousSibling.previousSibling.innerHTML
-    if (account == current_account.toLowerCase()) {
-      await withdraw({
-        onSuccess: async (tx) => {
-          await tx.wait(1);
-          handleSuccessNotification("Funds have been transferred!!");
-        },
-        onError: async (err) => {
-          console.log(err)
-          handleErrorNotification();
-        }
-      })
+    const current_account = event.target.parentNode.previousSibling.previousSibling.previousSibling.previousSibling.innerHTML
+    if (address == current_account) {
+      toast.dismiss("connecting");
+      toast.loading("Connecting with contract", {
+        id: "connect",
+      });
+      try {
+        const { request, result } = await prepareWriteContract({
+          address: gameAddress,
+          abi: GamecontractABI,
+          functionName: "withdrawDreamToken",
+        });
+
+        const { hash } = await writeContract(request);
+        await waitForTransaction({ hash });
+        toast.dismiss("connect");
+        toast.success("Successfully registered");
+        toast.custom("You'll be notified once approved", {
+          icon: "ℹ️",
+        });
+
+      } catch (err) {
+        toast.dismiss("connect");
+        console.error(err);
+        toast.error("Error connecting with contract");
+      }
     }
     else {
-      console.log("Wrong account")
-      handleErrorNotification();
+      toast.dismiss("Wrong account");
     }
   }
 
   const handleWinner = async (event) => {
-    let current_account = event.target.parentNode.previousSibling.previousSibling.previousSibling.innerHTML
-    if (account == current_account.toLowerCase()) {
-      await withdrawWinnerFunds({
-        onSuccess: async (tx) => {
-          await tx.wait(1);
-          handleSuccessNotification("Funds have been transferred!!");
-        },
-        onError: async (err) => {
-          console.log(err)
-          handleErrorNotification();
-        }
-      })
+    const current_account = event.target.parentNode.previousSibling.previousSibling.previousSibling.innerHTML
+    if (address == current_account) {
+      toast.dismiss("connecting");
+      toast.loading("Connecting with contract", {
+        id: "connect",
+      });
+      try {
+        const { request, result } = await prepareWriteContract({
+          address: gameAddress,
+          abi: GamecontractABI,
+          functionName: "withdrawDreamToken",
+        });
+
+        const { hash } = await writeContract(request);
+        await waitForTransaction({ hash });
+        toast.dismiss("connect");
+        toast.success("Successfully registered");
+        toast.custom("You'll be notified once approved", {
+          icon: "ℹ️",
+        });
+
+      } catch (err) {
+        toast.dismiss("connect");
+        console.error(err);
+        toast.error("Error connecting with contract");
+      }
     }
     else {
-      console.log("Wrong account")
-      handleErrorNotification();
+      toast.dismiss("Wrong account");
     }
   }
 
@@ -146,15 +126,17 @@ function Row(props) {
           {row.name}
         </TableCell>
         <TableCell align="right">{row.calories}</TableCell>
-        <TableCell align="right">{ethers.utils.formatEther(row.fat, "ether")} ETH</TableCell>
+        <TableCell align="right">{row.fat}</TableCell>
         <TableCell align="right">
           {props.winner == row.name
             ?
-            <Button variant="contained" color="success" onClick={handleWinner} disabled={isLoadingWinner || isFetchingWinner}>{ethers.utils.formatEther(props.winnerAmount, "ether")} ETH</Button>
+            <Button variant="contained" color="success" onClick={handleWinner} >{ethers.utils.formatEther(props.winnerAmount, "ether")} ETH</Button>
             : <div />}
         </TableCell>
         <TableCell align="right">
-          <Button variant="contained" color="error" onClick={handleWithdraw} disabled={isLoading || isFetching}>{ethers.utils.formatEther(row.carbs, "ether")} ETH</Button>
+          <Button onClick={handleWithdraw} >
+            <Image src="/assets/currency.png" alt="currency" width="200" height={200} className="inline-block w-10 h-10" />
+          </Button>
         </TableCell>
       </TableRow>
       <TableRow>
@@ -167,8 +149,8 @@ function Row(props) {
               <Table size="small" aria-label="purchases">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Token Id</TableCell>
-                    <TableCell>NFT</TableCell>
+                    <TableCell>Player</TableCell>
+                    <TableCell>ID</TableCell>
                     <TableCell align="right">Price</TableCell>
                   </TableRow>
                 </TableHead>
@@ -176,14 +158,12 @@ function Row(props) {
                   {row.history.map((historyRow) => (
                     <TableRow key={historyRow.date}>
                       <TableCell component="th" scope="row">
-                        {historyRow.date}
+                        {historyRow.date.toUpperCase()}
                       </TableCell>
                       <TableCell>
-                        <Button variant="outlined" size="small" href={historyRow.customerId} target="_blank">
-                          opensea
-                        </Button>
+                        {historyRow.customerId}
                       </TableCell>
-                      <TableCell align="right">{ethers.utils.formatEther(historyRow.amount, "ether")} ETH</TableCell>
+                      <TableCell align="right">{historyRow.amount}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -196,16 +176,14 @@ function Row(props) {
   );
 }
 
-
-
 export default function CollapsibleTable(props) {
   const rows = []
-  for (let i = 0; i < props.count; i++) {
+  for (let i = 0; i < props.registrants.length; i++) {
     rows.push(createData(
       props.registrants[i],
       props.numPlayerPurchased[i],
-      props.moneyspent[i],
-      props.withdrawableAmount[i],
+      0,
+      0,
       props.playersBought[i])
     )
   }
@@ -219,9 +197,9 @@ export default function CollapsibleTable(props) {
             <TableCell />
             <TableCell>Registrant</TableCell>
             <TableCell align="right">Number of Players Purshased</TableCell>
-            <TableCell align="right">Amount spent</TableCell>
+            <TableCell align="right">Team Score</TableCell>
             <TableCell align="right">{props.winner != "0x0000000000000000000000000000000000000000" ? "Winner Amount" : ""}</TableCell>
-            <TableCell align="right">Withdrawable amount</TableCell>
+            <TableCell align="right">Withdraw</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

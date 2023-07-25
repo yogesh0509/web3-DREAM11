@@ -38,7 +38,7 @@ const ConnectWallet = ({
                 return (
                   <button
                     onClick={openConnectModal}
-                    className="bg-gradient-to-r from-[#4dbc5d] to-[#00a694] px-3 py-2 rounded-lg text-white hover:scale-95 transition duration-300"
+                    className="bg-gradient-to-r from-[#9DB2BF] to-[#27374D] px-4 py-3 rounded-lg text-white hover:scale-95 transition duration-300"
                     type="button"
                   >
                     {connect_wallet_btn}
@@ -50,7 +50,7 @@ const ConnectWallet = ({
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="bg-[#f24343] px-3 py-2 rounded-lg text-white hover:scale-95 transition duration-300"
+                    className="bg-[#f24343] px-4 py-3 rounded-lg text-white hover:scale-95 transition duration-300"
                   >
                     {wrong_network_btn}
                   </button>
@@ -61,7 +61,7 @@ const ConnectWallet = ({
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    className="bg-gradient-to-r from-[#4dbc5d] to-[#00a694] px-3 py-2 rounded-lg text-white hover:scale-95 transition duration-300"
+                    className="bg-gradient-to-r from-[#9DB2BF] to-[#27374D] px-4 py-3 rounded-lg text-white hover:scale-95 transition duration-300"
                   >
                     {account.displayName}
                   </button>

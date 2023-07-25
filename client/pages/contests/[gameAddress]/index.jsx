@@ -74,7 +74,6 @@ export default function IndexPage({ gameAddress }) {
       arr.push(data)
     }
     setPlayers(arr)
-    console.log(arr)
   }
 
   return (

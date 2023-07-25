@@ -76,8 +76,8 @@ export default function MyApp({ Component, pageProps, router }) {
                         <MutatingDots
                             height="100"
                             width="100"
-                            color="#48bb78"
-                            secondaryColor="#48bb78"
+                            color="#526D82"
+                            secondaryColor="#526D82"
                             radius="12.5"
                             ariaLabel="mutating-dots-loading"
                             wrapperStyle={{}}

@@ -97,12 +97,11 @@ export default function ContestCard(props) {
       const data = await readContract({
         address: GameAddress,
         abi: contractABI,
-        functionName: "s_auctionState",
-        args: [address]
+        functionName: "s_auctionState"
       })
       console.log(data)
       if(data){
-        toast.err("Either any auction is going on or all the auctions have already ended!!")
+        toast.error("Either any auction is going on or all the auctions have already ended!!")
       }
       toast.error("Error connecting with contract");
     }
