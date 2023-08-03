@@ -20,7 +20,7 @@ export default function NavbarContent({ dt, dreamToken }) {
                 <>
                     <Link
                         href= {`${query.gameAddress}/leaderboard`}
-                        scroll
+                        scroll={true}
                         className="hover:scale-105 transition duration-300"
                     >
                         LEADERBOARD
