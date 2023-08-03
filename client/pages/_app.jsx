@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import '../styles/globals.css'
 import "@rainbow-me/rainbowkit/styles.css"
 import { RainbowKitProvider, getDefaultWallets, connectorsForWallets } from "@rainbow-me/rainbowkit"
@@ -7,6 +7,7 @@ import { polygonMumbai } from "wagmi/chains"
 import { publicProvider } from "wagmi/providers/public"
 import { alchemyProvider } from 'wagmi/providers/alchemy'
 
+import { useRouter } from 'next/router';
 import { Toaster } from "react-hot-toast"
 import { MutatingDots } from "react-loader-spinner"
 import { MyProvider } from "../context/ContractContext"
@@ -49,29 +50,34 @@ if (!firebase.apps.length) {
 
 export default function MyApp({ Component, pageProps, router }) {
     const { pathname } = router
+    const [loading, setLoading] = useState(false);
     const shouldRenderComponent = pathname !== '/'
+    const routerApp = useRouter();
 
-    const [ready, setReady] = React.useState(false)
-    React.useEffect(() => {
-        setReady(true)
-    }, [])
+    useEffect(() => {
+        const handleStart = () => {
+            setLoading(true);
+        };
+
+        const handleComplete = () => {
+            setLoading(false);
+        };
+
+        routerApp.events.on('routeChangeStart', handleStart);
+        routerApp.events.on('routeChangeComplete', handleComplete);
+        routerApp.events.on('routeChangeError', handleComplete);
+
+        return () => {
+            routerApp.events.off('routeChangeStart', handleStart);
+            routerApp.events.off('routeChangeComplete', handleComplete);
+            routerApp.events.off('routeChangeError', handleComplete);
+        };
+    }, [routerApp]);
 
     return (
         <MyProvider>
             <div>
-                {ready ? (
-                    <WagmiConfig config={wagmiConfig}>
-                        <RainbowKitProvider
-                            appInfo={demoAppInfo}
-                            chains={chains}
-                            modalSize="compact"
-                        >
-                            <Toaster position="top-center" reverseOrder={false} />
-                            {shouldRenderComponent ? <Navbar dt={true} /> : <Navbar />}
-                            <Component {...pageProps} />
-                        </RainbowKitProvider>
-                    </WagmiConfig>
-                ) : (
+                {loading ? (
                     <div className="flex h-screen w-screen justify-center items-center">
                         <MutatingDots
                             height="100"
@@ -85,6 +91,18 @@ export default function MyApp({ Component, pageProps, router }) {
                             visible={true}
                         />
                     </div>
+                ) : (
+                    <WagmiConfig config={wagmiConfig}>
+                        <RainbowKitProvider
+                            appInfo={demoAppInfo}
+                            chains={chains}
+                            modalSize="compact"
+                        >
+                            <Toaster position="top-center" reverseOrder={false} />
+                            {shouldRenderComponent ? <Navbar dt={true} /> : <Navbar />}
+                            <Component {...pageProps} />
+                        </RainbowKitProvider>
+                    </WagmiConfig>
                 )}
             </div>
         </MyProvider>
