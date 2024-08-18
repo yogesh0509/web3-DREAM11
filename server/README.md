@@ -1,5 +1,5 @@
 # Flowchart
-![Hardhat Logo](assets/flowchart.png)
+![Flowchart](assets/flowchart.png)
 
 # Getting Started
 

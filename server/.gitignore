@@ -9,5 +9,4 @@ coverage.json
 # don't push the environment vars!
 .env
 
-*.png
 *.txt
