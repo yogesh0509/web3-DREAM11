@@ -1,0 +1,44 @@
+# Binaries and build artifacts
+/target
+**/*.rs.bk
+
+# Package files
+Cargo.lock
+# If using Cargo workspaces, you might also want to ignore workspace-specific lock files
+# /Cargo.lock
+
+# Backup files and other temporary files (e.g., from editors)
+**/*~
+**/*.swp
+**/*.swo
+**/.DS_Store
+.idea/
+.vscode/
+
+# Coverage and testing outputs
+/tests/target
+/tests/coverage
+/tests/results
+
+# Output of 'cargo bench'
+/bench
+
+# Rusty tags and ctags
+tags
+*.tags
+
+# If using IDE plugins or tools that generate specific files
+/target/debug
+/target/release
+
+# If using documentation tools or scripts that generate specific files
+/doc
+
+# Other OS-generated files
+Thumbs.db
+.DS_Store
+
+# Mac specific exclusions
+*.dSYM
+*.dSYM.zip
+*.dSYM.tar.gz

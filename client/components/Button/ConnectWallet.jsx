@@ -1,5 +1,7 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import React from "react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 const ConnectWallet = ({
   wrong_network_btn = "Wrong Network",
@@ -22,6 +24,7 @@ const ConnectWallet = ({
           account &&
           chain &&
           (!authenticationStatus || authenticationStatus === "authenticated");
+
         return (
           <div
             {...(!ready && {
@@ -36,36 +39,37 @@ const ConnectWallet = ({
             {(() => {
               if (!connected) {
                 return (
-                  <button
-                    onClick={openConnectModal}
-                    className="bg-gradient-to-r from-[#9DB2BF] to-[#27374D] px-4 py-3 rounded-lg text-white hover:scale-95 transition duration-300"
-                    type="button"
-                  >
-                    {connect_wallet_btn}
-                  </button>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      onClick={openConnectModal}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                    >
+                      {connect_wallet_btn}
+                    </Button>
+                  </motion.div>
                 );
               }
               if (chain.unsupported) {
                 return (
-                  <button
-                    onClick={openChainModal}
-                    type="button"
-                    className="bg-[#f24343] px-4 py-3 rounded-lg text-white hover:scale-95 transition duration-300"
-                  >
-                    {wrong_network_btn}
-                  </button>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      onClick={openChainModal}
+                      variant="destructive"
+                    >
+                      {wrong_network_btn}
+                    </Button>
+                  </motion.div>
                 );
               }
               return (
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
                     onClick={openAccountModal}
-                    type="button"
-                    className="bg-gradient-to-r from-[#9DB2BF] to-[#27374D] px-4 py-3 rounded-lg text-white hover:scale-95 transition duration-300"
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                   >
                     {account.displayName}
-                  </button>
-                </div>
+                  </Button>
+                </motion.div>
               );
             })()}
           </div>
@@ -76,3 +80,4 @@ const ConnectWallet = ({
 };
 
 export default ConnectWallet;
+

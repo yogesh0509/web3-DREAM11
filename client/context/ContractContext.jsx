@@ -1,5 +1,6 @@
+import { config } from "@/config";
 import React, { createContext, useState } from "react"
-import { readContract } from "wagmi/actions"
+import { readContract } from "@wagmi/core"
 const abi = require("../constants/abi.json")
 
 export const ContractContext = createContext();
@@ -14,7 +15,7 @@ export const MyProvider = ({ children }) => {
 
 
   const PICAddresssetup = async (gameAddress) => {
-    const data = await readContract({
+    const data = await readContract(config, {
       address: gameAddress,
       abi: GamecontractABI,
       functionName: "getPICContract"
@@ -23,7 +24,7 @@ export const MyProvider = ({ children }) => {
   }
 
   const fetchTokens = async (gameAddress, address) => {
-    const data = await readContract({
+    const data = await readContract(config, {
       address: gameAddress,
       abi: GamecontractABI,
       functionName: "s_DreamToken",
@@ -33,7 +34,7 @@ export const MyProvider = ({ children }) => {
   }
 
   const fetchcurrentPlayer = async (gameAddress) => {
-    const data = await readContract({
+    const data = await readContract(config, {
       address: gameAddress,
       abi: GamecontractABI,
       functionName: "s_currentplayercount"

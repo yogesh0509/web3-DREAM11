@@ -1,111 +1,68 @@
-import React, { useEffect, useState, useContext } from "react"
+import React, { useState, useContext } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import ConnectWallet from "../Button/ConnectWallet"
-import { createTheme, ThemeProvider, Drawer } from '@mui/material'
-import { grey } from '@mui/material/colors'
+import { motion } from "framer-motion"
+import { Menu } from 'lucide-react'
 import { ContractContext } from "../../context/ContractContext"
+import ConnectWallet from "../Button/ConnectWallet"
 import NavbarContent from "./NavbarContent"
-
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: grey[900],
-    },
-    background: {
-      default: grey[900],
-    },
-  },
-});
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
 
 const Navbar = ({ className, dt }) => {
-  const [show, setScroll] = useState("")
-  const [link, setLink] = useState("text-white")
-  const [open, setOpen] = useState(false)
-  // const [lastScrollY, setLastScrollY] = useState(0)
+  const [isOpen, setIsOpen] = useState(false)
   const { dreamToken } = useContext(ContractContext)
 
-  // const handleScroll = () => {
-  //   if (window.scrollY > 150) {
-  //     setScroll("top-0 bg-white text-black shadow-md transalate-y-0")
-  //     setLink("text-black")
-  //   } else {
-  //     setScroll("bg-transparent transalate-y-0 text-white")
-  //     setLink("text-white")
-  //   }
-  //   setLastScrollY(window.scrollY)
-  // }
-  // useEffect(() => {
-  //   window.addEventListener("scroll", handleScroll)
-  //   return () => {
-  //     window.removeEventListener("scroll", handleScroll)
-  //   }
-  // }, [lastScrollY])
-
   return (
-    <nav
-      className={`w-screen h-[50px] md:h-[80px] z-20 sticky transition-transform duration-700 flex justify-between items-center bg-black ${link} ${show} ${className}`}
+    <motion.nav
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ type: "spring", stiffness: 120, damping: 20 }}
+      className={`w-full h-16 md:h-20 z-50 fixed top-0 left-0 right-0 bg-gradient-to-r from-gray-900 to-gray-800 text-white shadow-lg ${className}`}
     >
-      <div className="w-full max-w-[1380px] px-7 font-proxima mx-auto h-[60px] flex justify-between items-center text-xl py-3 ">
-        <Link href={"/"}>
+      <div className="w-full max-w-7xl px-4 mx-auto h-full flex justify-between items-center">
+        <Link href="/" className="flex items-center space-x-2">
           <Image
             src="/assets/logo.png"
-            alt="logo"
-            width="200"
-            height={200}
-            className="w-14 h-14"
+            alt="Dream11 Logo"
+            width={40}
+            height={40}
+            className="w-10 h-10"
           />
+          <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 text-transparent bg-clip-text">
+            DREAM11
+          </span>
         </Link>
-        <div className="hidden md:flex justify-between basis-[55%] font-proxima text-xl">
+
+        <div className="hidden md:flex justify-between items-center space-x-6 text-sm">
           <NavbarContent dt={dt} dreamToken={dreamToken} />
         </div>
 
-        <section className="flex">
-          <div>
-            <ConnectWallet />
-          </div>
-        </section>
+        <div className="flex items-center space-x-4">
+          <ConnectWallet />
 
-        {/* Add responsive navbar button for smaller screens */}
-        <div className="md:hidden">
-          <button
-            className="text-white focus:outline-none"
-            onClick={() => setOpen(true)}
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-gray-900 text-white">
+              <div className="flex flex-col space-y-4 mt-8">
+                <NavbarContent dt={dt} dreamToken={dreamToken} />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
-        {/* Render responsive drawer for smaller screens */}
-        <ThemeProvider theme={darkTheme}>
-          <Drawer
-            anchor="right"
-            open={open}
-            onClose={() => setOpen(false)}
-            classes={{
-              paper: 'drawer-paper',
-            }}
-          >
-            <div className="flex flex-col items-start py-4 space-y-4 pl-4 pr-8 font-proxima text-xl">
-              <NavbarContent dt={dt} dreamToken={dreamToken} />
-            </div>
-          </Drawer>
-        </ThemeProvider>
       </div>
-    </nav>
+    </motion.nav>
   )
 }
 
 export default Navbar
+

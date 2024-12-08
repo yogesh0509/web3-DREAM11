@@ -42,3 +42,9 @@ git push origin feature/your-feature-name
 6. Submit a new PR with a clear description of the changes. 
 
 ### Thank you for your contributions!!!
+
+```bash
+sea-orm-cli migrate -u mysql://sql12748276:lQFa5ewK8m@sql12.freemysqlhosting.net:3306/sql12748276
+sea-orm-cli generate entity -u mysql://sql12748276:lQFa5ewK8m@sql12.freemysqlhosting.net:3306/sql12748276 -o entity/src
+```
+

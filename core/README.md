@@ -64,3 +64,16 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+```shell
+# Deploy and verify using foundry
+
+# GAME_FACTORY -> 0xc8C23F4DcC2f3053C53862335970728D91154Df7
+$ forge script ./script/GameFactory.s.sol:DeployGameFactory -vvvv --broadcast --rpc-url https://base-sepolia.g.alchemy.com/v2/-rWU61cBUlLTu3wDqYfP9qvAoZErhcuh --sig "run()" --legacy --etherscan-api-key 26RASBPDQ83JTHXCXU46TCY7MRZH1IQ2C3 --verify
+
+# GAME -> 0x5d8D13e67ee77a7a9906CF9223B3C27feB79A356
+forge script ./script/Game.s.sol:DeployGame -vvvv --broadcast --rpc-url https://base-sepolia.g.alchemy.com/v2/-rWU61cBUlLTu3wDqYfP9qvAoZErhcuh --legacy --sig "run(address)" -- 0xc8C23F4DcC2f3053C53862335970728D91154Df7 --etherscan-api-key 26RASBPDQ83JTHXCXU46TCY7MRZH1IQ2C3 --verify
+
+# CREATE GAME -> 0x5d8D13e67ee77a7a9906CF9223B3C27feB79A356
+forge script ./script/GameFactory.s.sol:DeployGameFactory -vvvv --broadcast --rpc-url https://base-sepolia.g.alchemy.com/v2/-rWU61cBUlLTu3wDqYfP9qvAoZErhcuh --legacy --sig "startGame(address,uint256)" -- 0x5d8D13e67ee77a7a9906CF9223B3C27feB79A356 36000
+```
