@@ -71,15 +71,7 @@ contract Game is FunctionsClient, AutomationCompatibleInterface, Ownable {
     error SenderIsNotWinner();
     error UnexpectedRequestID(bytes32 requestId);
 
-    event PlayerBid(uint256 indexed tokenId);
     event BuyerRegistered(address indexed registrant);
-    event AuctionEnded(address indexed winner, uint256 indexed amount);
-    event AuctionStarted(uint256 indexed tokenId);
-    // event HighestBidIncrease(
-    //     uint256 indexed tokenId,
-    //     address indexed bidder,
-    //     uint256 indexed amount
-    // );
 
     constructor(
         uint256 _time,
@@ -172,9 +164,7 @@ contract Game is FunctionsClient, AutomationCompatibleInterface, Ownable {
             revert NotEnoughFunds();
         }
         s_DreamToken[msg.sender] -= s_biddingPrice;
-        s_AuctionContract.bid(msg.sender, s_biddingPrice);
-
-        emit PlayerBid(s_currentplayercount);
+        s_AuctionContract.bid(msg.sender, s_biddingPrice, s_currentplayercount);
 
         if (s_biddingPrice >= 10) {
             s_biddingPrice += 5;
@@ -210,8 +200,7 @@ contract Game is FunctionsClient, AutomationCompatibleInterface, Ownable {
             ) {
                 s_auctionState = true;
                 s_currentAuctionTime = block.timestamp;
-                s_AuctionContract.restartAuction();
-                emit AuctionStarted(s_currentplayercount);
+                s_AuctionContract.restartAuction(s_currentplayercount);
             } else if (
                 (block.timestamp - s_currentAuctionTime >= s_auctionTime) &&
                 s_auctionState
@@ -221,8 +210,7 @@ contract Game is FunctionsClient, AutomationCompatibleInterface, Ownable {
                 (
                     address s_highestBidder,
                     uint256 s_highestBid
-                ) = s_AuctionContract.auctionEnd();
-                emit AuctionEnded(s_highestBidder, s_highestBid);
+                ) = s_AuctionContract.auctionEnd(s_currentplayercount);
 
                 s_biddingPrice = 1;
 

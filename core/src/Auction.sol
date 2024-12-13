@@ -10,23 +10,23 @@ contract Auction is Ownable {
 
     mapping(address => uint256) public pendingReturns;
 
-    event HighestBidIncrease(address bidder, uint256 amount);
-    event AuctionEnded(address winner, uint256 amount);
-    event AuctionStarted();
+    event HighestBidIncrease(address bidder, uint256 amount, uint256 currentPlayer);
+    event AuctionEnded(address winner, uint256 amount, uint256 currentPlayer);
+    event AuctionStarted(uint256 currentPlayer);
 
     error AuctionEndAlreadyCalled();
     error NeedHigherBid(uint256 highest_bid);
 
     constructor() Ownable(msg.sender) {}
 
-    function restartAuction() external onlyOwner {
+    function restartAuction(uint256 _currentPlayer) external onlyOwner {
         ended = false;
         s_highestBid = 0;
         s_highestBidder = address(0);
-        emit AuctionStarted();
+        emit AuctionStarted(_currentPlayer);
     }
 
-    function bid(address _bidder, uint256 _bid) external onlyOwner {
+    function bid(address _bidder, uint256 _bid, uint256 _currentPlayer) external onlyOwner {
         if (_bid <= s_highestBid) {
             revert NeedHigherBid(s_highestBid);
         }
@@ -37,7 +37,7 @@ contract Auction is Ownable {
 
         s_highestBidder = _bidder;
         s_highestBid = _bid;
-        emit HighestBidIncrease(s_highestBidder, s_highestBid);
+        emit HighestBidIncrease(s_highestBidder, s_highestBid, _currentPlayer);
     }
 
     function withdraw(
@@ -51,12 +51,12 @@ contract Auction is Ownable {
         }
     }
 
-    function auctionEnd() external onlyOwner returns (address, uint256) {
+    function auctionEnd(uint256 _currentPlayer) external onlyOwner returns (address, uint256) {
         if (ended) {
             revert AuctionEndAlreadyCalled();
         }
         ended = true;
-        emit AuctionEnded(s_highestBidder, s_highestBid);
+        emit AuctionEnded(s_highestBidder, s_highestBid, _currentPlayer);
         return (getHighestBidder(), getHighestBid());
     }
 

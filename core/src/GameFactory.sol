@@ -6,34 +6,34 @@ import "./interfaces/IGame.sol";
 import "./PIC.sol";
 
 contract GameFactory is Ownable {
-    struct GameQuery {
-        address GameAddress;
-        uint256 startTime;
-    }
-    GameQuery[] private s_GameStorage;
+    address[] public s_GameStorage;
 
     event GameCreated(
-        address indexed _GameAddress,
-        uint256 indexed _auctionStartTime
+        address indexed _gameAddress,
+        uint256 indexed _auctionStartTime,
+        uint256 indexed _totalPlayers
     );
 
     constructor() Ownable(msg.sender) {}
 
     function createGame(
-        address _newGame,
+        address _newGameAddress,
         IPlayer.PlayerQuery[] memory _Players,
         uint256 _auctionStartTime
     ) public onlyOwner {
-        PIC newPlayer = new PIC(_Players);
-        IGame newGame = IGame(_newGame);
-        newGame.start(address(newPlayer), _auctionStartTime);
+        PIC newPICContract = new PIC(_Players);
+        IGame gameContract = IGame(_newGameAddress);
+        gameContract.start(address(newPICContract), _auctionStartTime);
 
-        GameQuery memory newQuery = GameQuery(_newGame, _auctionStartTime);
-        s_GameStorage.push(newQuery);
-        emit GameCreated(_newGame, _auctionStartTime);
+        s_GameStorage.push(_newGameAddress);
+        emit GameCreated(
+            _newGameAddress,
+            _auctionStartTime,
+            newPICContract.getTotalPlayers()
+        );
     }
 
-    function getAllGames() external view returns (GameQuery[] memory) {
+    function getAllGames() external view returns (address[] memory) {
         return s_GameStorage;
     }
 }

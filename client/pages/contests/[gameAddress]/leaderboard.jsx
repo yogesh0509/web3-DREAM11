@@ -1,17 +1,18 @@
+'use client'
+
 import React, { useEffect, useState, useContext } from "react"
 import { useRouter } from 'next/router'
-import { readContract } from "@wagmi/core"
-import { useAccount } from "wagmi"
-import { motion } from "framer-motion"
-import { ContractContext } from "../../../context/ContractContext"
-import { StatCard } from "@/components/ui/stat-card"
-import { RankColumn } from "@/components/ui/rank-column"
-import { FloatingOrbs } from "@/components/decorative/floating-orbs"
-import { Button } from "@/components/ui/button"
+import { useAccount } from 'wagmi'
+import { readContract } from '@wagmi/core'
+import { motion, AnimatePresence } from "framer-motion"
+import { toast } from "react-hot-toast"
+import { ContractContext } from "@/context/ContractContext"
+import LeaderboardTable from "@/components/LeaderboardTable"
 import { Input } from "@/components/ui/input"
-import { Loader2, Search } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Search, Trophy, Crown } from "lucide-react"
 
-const abi = require("../../../constants/abi.json")
+const abi = require("@/constants/abi.json")
 
 export default function Leaderboard({ GameAddress }) {
   const { address } = useAccount()
@@ -25,34 +26,29 @@ export default function Leaderboard({ GameAddress }) {
   const [winner, setWinner] = useState("")
   const [winnerAmount, setWinnerAmount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
-
-    const initializeData = async () => {
-      try {
-        setLoading(true)
+    const init = async () => {
+      if (address) {
         await fetchLeaderboard()
         await fetchTokens(GameAddress, address)
-      } catch (error) {
-        console.error("Error fetching leaderboard:", error)
-      } finally {
-        setLoading(false)
       }
     }
-
-    initializeData()
+    init()
   }, [address, GameAddress])
 
   const fetchLeaderboard = async () => {
     try {
-      const buyersData = await readContract({
+      setLoading(true)
+      const buyers = await readContract({
         address: GameAddress,
         abi: GamecontractABI,
         functionName: "getBuyers",
       })
-      setRegistrants(buyersData)
+      setRegistrants(buyers)
 
-      const playerDataPromises = buyersData.map(async (player) => {
+      const playerDataPromises = buyers.map(async (player) => {
         const [countResponse, playerDetailsResponse] = await Promise.all([
           readContract({
             address: GameAddress,
@@ -65,7 +61,7 @@ export default function Leaderboard({ GameAddress }) {
             abi: GamecontractABI,
             functionName: "fetchPlayers",
             args: [player],
-          }),
+          })
         ])
 
         return {
@@ -85,124 +81,108 @@ export default function Leaderboard({ GameAddress }) {
       })
       setWinner(winnerAddress)
 
-      const winnerFunds = await readContract({
-        address: GameAddress,
-        abi: GamecontractABI,
-        functionName: "s_winnerFunds",
-        args: [winnerAddress],
-      })
-      setWinnerAmount(parseInt(winnerFunds))
+      if (winnerAddress !== "0x0000000000000000000000000000000000000000") {
+        const winnerFunds = await readContract({
+          address: GameAddress,
+          abi: GamecontractABI,
+          functionName: "s_winnerFunds",
+          args: [winnerAddress],
+        })
+        setWinnerAmount(parseInt(winnerFunds))
+      }
     } catch (error) {
-      console.error("Error fetching leaderboard data:", error)
+      console.error("Error fetching leaderboard:", error)
+      toast.error("Failed to load leaderboard data")
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    )
-  }
+  const filteredRegistrants = registrants.filter(registrant => 
+    registrant.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-pink-50 dark:from-gray-900 dark:to-gray-800">
-      <div className="max-w-7xl mx-auto px-4 py-12 relative">
-        <FloatingOrbs />
-        
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
-        <motion.div
+        <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4"
         >
-          <h1 className="text-4xl font-bold text-navy-900 mb-4">
-            Leaderboard Page
-          </h1>
-          <div className="max-w-md mx-auto">
+          <div className="flex items-center gap-3">
+            <Trophy className="h-8 w-8 text-blue-500" />
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
+              Leaderboard
+            </h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {winner !== "0x0000000000000000000000000000000000000000" && (
+              <div className="flex items-center gap-2 bg-yellow-500/10 text-yellow-500 px-4 py-2 rounded-full">
+                <Crown className="h-5 w-5" />
+                <span className="font-semibold">Winner Found!</span>
+              </div>
+            )}
             <div className="relative">
               <Input
                 type="text"
                 placeholder="Search players..."
-                className="pl-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-64 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
               />
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             </div>
           </div>
         </motion.div>
 
-        {/* Ranking Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
-          <RankColumn
-            title="Rank"
-            values={registrants.map((_, i) => `#${i + 1}`)}
-            color="bg-gradient-to-b from-blue-100/80 to-blue-200/80"
-            delay={0.1}
-          />
-          <RankColumn
-            title="Total Wins"
-            values={numPlayerPurchased.map(count => count.toString())}
-            color="bg-gradient-to-b from-yellow-100/80 to-yellow-200/80"
-            delay={0.2}
-          />
-          <RankColumn
-            title="Players Owned"
-            values={playersBought.map(players => players.length.toString())}
-            color="bg-gradient-to-b from-pink-100/80 to-pink-200/80"
-            delay={0.3}
-          />
-          <RankColumn
-            title="Earnings"
-            values={registrants.map(() => "0.00")}
-            color="bg-gradient-to-b from-purple-100/80 to-purple-200/80"
-            delay={0.4}
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 -z-10">
+          <motion.div
+            animate={{ 
+              y: [0, 20, 0],
+              rotate: [0, 5, 0]
+            }}
+            transition={{ 
+              duration: 5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="w-32 h-32 bg-blue-400/10 rounded-full blur-3xl"
           />
         </div>
 
-        {/* Stats Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-8"
-        >
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-            <StatCard
-              icon="/placeholder.svg"
-              label="Rank"
-              value="1.11"
-              subValue="125 Wins"
-              color="text-blue-600"
-            />
-            <StatCard
-              icon="/placeholder.svg"
-              label="Total Wins"
-              value="1.20"
-              subValue="125 Wins"
-              color="text-yellow-600"
-            />
-            <StatCard
-              icon="/placeholder.svg"
-              label="Total Wins"
-              value="1.20"
-              subValue="125 Wins"
-              color="text-pink-600"
-            />
-            <StatCard
-              icon="/placeholder.svg"
-              label="Earnings"
-              value="1.29"
-              subValue="125 Wins"
-              color="text-purple-600"
-            />
-            <StatCard
-              icon="/placeholder.svg"
-              label="Earnings"
-              value="1.32"
-              subValue="125 Wins"
-              color="text-green-600"
-            />
-          </div>
-        </motion.div>
+        {/* Table */}
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex justify-center items-center h-64"
+            >
+              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-md rounded-xl shadow-xl"
+            >
+              <LeaderboardTable
+                registrants={filteredRegistrants}
+                numPlayerPurchased={numPlayerPurchased}
+                playersBought={playersBought}
+                winner={winner}
+                winnerAmount={winnerAmount}
+                gameAddress={GameAddress}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
@@ -213,7 +193,6 @@ export async function getServerSideProps(context) {
   return {
     props: {
       GameAddress
-    }
+    },
   }
 }
-

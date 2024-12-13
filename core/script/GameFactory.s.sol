@@ -19,8 +19,7 @@ contract DeployGameFactory is Script {
         return gameFactory;
     }
 
-    function startGame(address gameAddress, uint256 auctionStartTime) external {
-        address factoryAddress = 0xc8C23F4DcC2f3053C53862335970728D91154Df7;
+    function startGame(address factoryAddress, address gameAddress, uint256 auctionStartTime) external {
         IPlayer.PlayerQuery[] memory players = new IPlayer.PlayerQuery[](4);
 
         players[0] = IPlayer.PlayerQuery({
