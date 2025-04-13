@@ -4,21 +4,14 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import '../styles/globals.css'
 import "@rainbow-me/rainbowkit/styles.css"
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit"
+import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider } from "wagmi"
 import { Toaster } from "react-hot-toast"
 import { motion, AnimatePresence } from "framer-motion"
-// import { initializeApp } from 'firebase/app'
-// import { getDatabase } from 'firebase/database'
-import { MyProvider } from "../context/ContractContext"
+import { ContractProvider } from "../context/ContractContext"
 import Navbar from "../components/Navbar/Navbar"
 import { config } from "../config"
-import { firebaseConfig } from "../constants/firebaseConfig"
-
-// Initialize Firebase
-// const app = initializeApp(firebaseConfig)
-// const database = getDatabase(app)
 
 const queryClient = new QueryClient()
 
@@ -43,17 +36,35 @@ export default function MyApp({ Component, pageProps }: AppProps) {
   }, [router])
 
   return (
-    <MyProvider>
+    <ContractProvider>
       <Head>
-        <title>Dream11 - Test your knowledge & earn real money</title>
-        <meta name="description" content="Dream11 - The ultimate fantasy sports platform" />
+        <title>Blockchain Fantasy Sports | Play & Earn Crypto</title>
+        <meta name="description" content="Join the next generation of fantasy sports. Play, compete, and earn crypto rewards." />
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider modalSize="compact">
-            <div className="min-h-screen bg-gray-900 text-white">
-              <Toaster position="top-center" reverseOrder={false} />
+          <RainbowKitProvider 
+            theme={darkTheme({
+              accentColor: '#7C3AED',
+              accentColorForeground: 'white',
+              borderRadius: 'medium',
+              fontStack: 'system',
+            })}
+            modalSize="compact"
+          >
+            <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
+              <Toaster 
+                position="top-center" 
+                reverseOrder={false}
+                toastOptions={{
+                  style: {
+                    background: '#1F2937',
+                    color: '#fff',
+                    border: '1px solid #374151',
+                  },
+                }}
+              />
               {shouldRenderNavbar ? <Navbar dt={true} className={undefined} /> : <Navbar className={undefined} dt={undefined} />}
               <AnimatePresence mode="wait">
                 {loading ? (
@@ -64,7 +75,12 @@ export default function MyApp({ Component, pageProps }: AppProps) {
                     exit={{ opacity: 0 }}
                     className="flex h-screen w-screen justify-center items-center"
                   >
-                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="relative">
+                      <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-purple-300 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    </div>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -72,6 +88,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
                   >
                     <Component {...pageProps} />
                   </motion.div>
@@ -81,7 +98,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
-    </MyProvider>
+    </ContractProvider>
   )
 }
 

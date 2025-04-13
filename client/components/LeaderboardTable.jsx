@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState } from "react"
+import React, { useState, useContext } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAccount } from 'wagmi'
-import { writeContract } from '@wagmi/core'
 import { toast } from "react-hot-toast"
-import { ChevronDown, ChevronUp, Trophy, Coins, Users, Award } from 'lucide-react'
+import { ChevronDown, ChevronUp, Trophy, Coins, Users, Award, Loader2 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,21 +16,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-
-const abi = require("@/constants/abi.json")
+import { ContractContext } from "@/context/ContractContext"
+import { formatEther } from "ethers"
+import { cn } from "@/lib/utils"
 
 function LeaderboardRow({ 
   registrant, 
   numPurchased, 
-  playersBought, 
   isWinner, 
   winnerAmount, 
   gameAddress,
   rank 
 }) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [loading, setLoading] = useState(false)
   const { address } = useAccount()
-  const GamecontractABI = JSON.parse(abi["Game"])
+  const context = useContext(ContractContext)
 
   const handleWithdraw = async () => {
     if (address !== registrant) {
@@ -40,18 +40,15 @@ function LeaderboardRow({
     }
 
     try {
+      setLoading(true)
       toast.loading("Processing withdrawal...", { id: "withdraw" })
-      const { hash } = await writeContract({
-        address: gameAddress,
-        abi: GamecontractABI,
-        functionName: "withdrawDreamToken",
-      })
-      
-      await waitForTransaction({ hash })
+      await context.withdrawDreamToken(gameAddress)
       toast.success("Withdrawal successful", { id: "withdraw" })
     } catch (error) {
       console.error("Withdrawal error:", error)
       toast.error("Failed to process withdrawal", { id: "withdraw" })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -62,18 +59,15 @@ function LeaderboardRow({
     }
 
     try {
+      setLoading(true)
       toast.loading("Processing claim...", { id: "claim" })
-      const { hash } = await writeContract({
-        address: gameAddress,
-        abi: GamecontractABI,
-        functionName: "withdrawDreamToken",
-      })
-      
-      await waitForTransaction({ hash })
+      await context.withdrawWinnerFunds(gameAddress)
       toast.success("Claim successful", { id: "claim" })
     } catch (error) {
       console.error("Claim error:", error)
       toast.error("Failed to process claim", { id: "claim" })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -106,7 +100,7 @@ function LeaderboardRow({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.3 }}
-        className="group hover:bg-blue-50/50 dark:hover:bg-gray-800/50 transition-colors"
+        className="group hover:bg-gray-700/50 transition-colors"
       >
         <TableCell className="w-12">
           <Button
@@ -133,12 +127,12 @@ function LeaderboardRow({
             </Avatar>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <p className="font-medium">
+                <p className="font-medium text-white">
                   {registrant.slice(0, 6)}...{registrant.slice(-4)}
                 </p>
                 {getRankBadge(rank)}
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-gray-400">
                 <Users className="w-4 h-4" />
                 <span>{numPurchased} Players Selected</span>
               </div>
@@ -155,10 +149,18 @@ function LeaderboardRow({
               <Button
                 variant="outline"
                 onClick={handleWinnerClaim}
-                className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20"
+                disabled={loading}
+                className={cn(
+                  "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20",
+                  loading && "opacity-50 cursor-not-allowed"
+                )}
               >
-                <Trophy className="h-4 w-4 mr-2" />
-                Claim {winnerAmount} ETH
+                {loading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trophy className="h-4 w-4 mr-2" />
+                )}
+                Claim {formatEther(winnerAmount)} ETH
               </Button>
             </motion.div>
           )}
@@ -173,43 +175,53 @@ function LeaderboardRow({
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <TableCell colSpan={3} className="bg-gray-50 dark:bg-gray-800/50">
+            <TableCell colSpan={3} className="bg-gray-800/50">
               <motion.div
                 initial={{ y: -20 }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.2 }}
                 className="p-4 space-y-4"
               >
-                <h4 className="font-medium text-gray-900 dark:text-gray-100">Selected Players</h4>
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium text-white">Player Details</h4>
+                  {!isWinner && (
+                    <Button
+                      variant="outline"
+                      onClick={handleWithdraw}
+                      disabled={loading}
+                      className={cn(
+                        "bg-purple-500/10 text-purple-500 border-purple-500/20 hover:bg-purple-500/20",
+                        loading && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      {loading ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Coins className="h-4 w-4 mr-2" />
+                      )}
+                      Withdraw Tokens
+                    </Button>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {playersBought.map((player, index) => (
+                  {Array(numPurchased).fill(0).map((_, index) => (
                     <div
                       key={index}
-                      className="p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm"
+                      className="p-3 bg-gray-700/50 rounded-lg"
                     >
                       <div className="flex items-center gap-2">
                         <Avatar className="w-8 h-8">
-                          <AvatarImage src={`https://avatar.vercel.sh/${player}.png`} />
-                          <AvatarFallback>{player.slice(0, 2)}</AvatarFallback>
+                          <AvatarImage src={`https://avatar.vercel.sh/${registrant}-${index}.png`} />
+                          <AvatarFallback>{index + 1}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium">{player}</p>
-                          <p className="text-xs text-gray-500">Player #{index + 1}</p>
+                          <p className="text-sm font-medium text-white">Player #{index + 1}</p>
+                          <p className="text-xs text-gray-400">Selected</p>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-                {!isWinner && (
-                  <Button
-                    variant="outline"
-                    onClick={handleWithdraw}
-                    className="mt-4"
-                  >
-                    <Coins className="h-4 w-4 mr-2" />
-                    Withdraw Tokens
-                  </Button>
-                )}
               </motion.div>
             </TableCell>
           </motion.tr>
@@ -222,16 +234,15 @@ function LeaderboardRow({
 export default function LeaderboardTable({
   registrants,
   numPlayerPurchased,
-  playersBought,
   winner,
   winnerAmount,
   gameAddress
 }) {
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 text-white shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="hover:bg-transparent">
             <TableHead className="w-12"></TableHead>
             <TableHead>Player</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -243,7 +254,6 @@ export default function LeaderboardTable({
               key={registrant}
               registrant={registrant}
               numPurchased={numPlayerPurchased[index]}
-              playersBought={playersBought[index]}
               isWinner={winner === registrant}
               winnerAmount={winnerAmount}
               gameAddress={gameAddress}

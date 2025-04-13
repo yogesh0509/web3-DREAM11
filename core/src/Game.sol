@@ -16,6 +16,7 @@ contract Game is FunctionsClient, AutomationCompatibleInterface, Ownable {
         uint256 price;
     }
 
+    uint256 public constant REGISTRATION_FEE = 1e15;
     uint256 public s_auctionTime;
     uint256 public s_totalplayerCount;
     uint256 public s_currentplayercount;
@@ -138,7 +139,7 @@ contract Game is FunctionsClient, AutomationCompatibleInterface, Ownable {
             revert AuctionIsOpen();
         }
 
-        if (msg.value != 1e17) {
+        if (msg.value != REGISTRATION_FEE) {
             revert IncorrectRegistrationAmount();
         }
         s_DreamToken[msg.sender] = 100;

@@ -2,6 +2,7 @@ import React from "react"
 import { useRouter } from 'next/router'
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 interface PlayerCardProps {
   image: string
@@ -9,9 +10,17 @@ interface PlayerCardProps {
   role: string
   name: string
   currentPlayer: number
+  className?: string
 }
 
-export default function PlayerCard({ image, id, role, name, currentPlayer }: PlayerCardProps) {
+export const PlayerCard: React.FC<PlayerCardProps> = ({
+  image,
+  id,
+  role,
+  name,
+  currentPlayer,
+  className,
+}) => {
   const router = useRouter()
   const { query } = router
 
@@ -27,7 +36,7 @@ export default function PlayerCard({ image, id, role, name, currentPlayer }: Pla
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: id * 0.1 }}
       whileHover={{ scale: 1.02 }}
-      className="group"
+      className={cn("group", className)}
     >
       <button 
         onClick={handlePlayerDetails}
@@ -49,13 +58,11 @@ export default function PlayerCard({ image, id, role, name, currentPlayer }: Pla
                 {name.toUpperCase()}
               </h3>
               <Badge 
-                variant={isSoldOut ? "destructive" : "default"}
-                className={`
-                  ${isSoldOut 
-                    ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' 
-                    : 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20'
-                  }
-                `}
+                className={cn(
+                  isSoldOut
+                    ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                    : "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20"
+                )}
               >
                 {isSoldOut ? "SOLD OUT" : "AVAILABLE"}
               </Badge>
@@ -68,13 +75,12 @@ export default function PlayerCard({ image, id, role, name, currentPlayer }: Pla
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`
-                  px-4 py-1 rounded-full text-sm font-medium
-                  ${isSoldOut 
-                    ? 'bg-red-500/10 text-red-500' 
-                    : 'bg-purple-500 text-white'
-                  }
-                `}
+                className={cn(
+                  "px-4 py-1 rounded-full text-sm font-medium",
+                  isSoldOut
+                    ? "bg-red-500/10 text-red-500"
+                    : "bg-purple-500 text-white"
+                )}
               >
                 {isSoldOut ? "VIEW DETAILS" : "BID NOW"}
               </motion.div>
