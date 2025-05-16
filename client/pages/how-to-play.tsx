@@ -11,8 +11,8 @@ const steps = [
   },
   {
     icon: Coins,
-    title: "Get Some MATIC",
-    description: "You'll need MATIC tokens to participate in auctions. You can buy MATIC on exchanges or get test tokens for practice."
+    title: "Get Some ETH",
+    description: "You'll need ETH tokens to participate in auctions. You can buy ETH on exchanges or get test tokens for practice."
   },
   {
     icon: GamepadIcon,

@@ -18,7 +18,7 @@ const queryClient = new QueryClient()
 export default function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const shouldRenderNavbar = router.pathname !== '/'
+  const shouldRenderNavbar = !['/', '/how-to-play', '/faq'].includes(router.pathname)
 
   useEffect(() => {
     const handleStart = () => setLoading(true)
@@ -44,7 +44,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
       </Head>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider 
+          <RainbowKitProvider
             theme={darkTheme({
               accentColor: '#7C3AED',
               accentColorForeground: 'white',
@@ -54,8 +54,8 @@ export default function MyApp({ Component, pageProps }: AppProps) {
             modalSize="compact"
           >
             <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
-              <Toaster 
-                position="top-center" 
+              <Toaster
+                position="top-center"
                 reverseOrder={false}
                 toastOptions={{
                   style: {
@@ -90,7 +90,10 @@ export default function MyApp({ Component, pageProps }: AppProps) {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Component {...pageProps} />
+                    <div className=" pt-16 md:pt-20">
+                      <Component {...pageProps} />
+                    </div>
+
                   </motion.div>
                 )}
               </AnimatePresence>

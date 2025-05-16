@@ -4,10 +4,11 @@ import React, { useState, useContext } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAccount } from 'wagmi'
 import { toast } from "react-hot-toast"
-import { ChevronDown, ChevronUp, Trophy, Coins, Users, Award, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Trophy, Coins, Users, Award, Loader2, Star, ExternalLink } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 import {
   Table,
   TableBody,
@@ -19,13 +20,51 @@ import {
 import { ContractContext } from "@/context/ContractContext"
 import { formatEther } from "ethers"
 import { cn } from "@/lib/utils"
+import { withdrawDreamToken, withdrawWinnerFunds } from "@/utils/contractUtils"
+
+function PlayerCard({ player, gameAddress, picAddress }) {
+  return (
+    <Link href={`/contests/${gameAddress}/player-details/${player.tokenId}`} passHref>
+      <div className="p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer">
+        <div className="flex items-start gap-3">
+          <Avatar className="w-10 h-10 border-2 border-purple-500/30">
+            <AvatarImage 
+              src={player.player.imageURI || `https://avatar.vercel.sh/${player.tokenId}.png`} 
+              alt={player.player.name}
+            />
+            <AvatarFallback>{player.player.name?.charAt(0) || "P"}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-white truncate">
+                {player.player.name || `Player #${player.tokenId}`}
+              </p>
+              <Badge className="bg-green-500/10 text-green-400 border-green-500/20">
+                {player.price.toString()} Tokens
+              </Badge>
+            </div>
+            <p className="text-xs text-gray-400">{player.player.role || "Unknown Role"}</p>
+            <div className="flex items-center gap-1 mt-1">
+              <ExternalLink className="w-3 h-3 text-blue-400" />
+              <span className="text-xs text-blue-400">View Details</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 function LeaderboardRow({ 
   registrant, 
   numPurchased, 
+  teamScore,
+  playersList,
   isWinner, 
   winnerAmount, 
   gameAddress,
+  picAddress,
+  gameUnlocked,
   rank 
 }) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -42,7 +81,7 @@ function LeaderboardRow({
     try {
       setLoading(true)
       toast.loading("Processing withdrawal...", { id: "withdraw" })
-      await context.withdrawDreamToken(gameAddress)
+      await withdrawDreamToken(gameAddress)
       toast.success("Withdrawal successful", { id: "withdraw" })
     } catch (error) {
       console.error("Withdrawal error:", error)
@@ -61,7 +100,7 @@ function LeaderboardRow({
     try {
       setLoading(true)
       toast.loading("Processing claim...", { id: "claim" })
-      await context.withdrawWinnerFunds(gameAddress)
+      await withdrawWinnerFunds(gameAddress)
       toast.success("Claim successful", { id: "claim" })
     } catch (error) {
       console.error("Claim error:", error)
@@ -136,11 +175,15 @@ function LeaderboardRow({
                 <Users className="w-4 h-4" />
                 <span>{numPurchased} Players Selected</span>
               </div>
+              <div className="flex items-center gap-2 text-sm text-yellow-400">
+                <Star className="w-4 h-4" />
+                <span>Team Score: {teamScore?.toString() || '0'}</span>
+              </div>
             </div>
           </div>
         </TableCell>
         <TableCell className="text-right">
-          {isWinner && (
+          {isWinner && gameUnlocked && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -149,10 +192,11 @@ function LeaderboardRow({
               <Button
                 variant="outline"
                 onClick={handleWinnerClaim}
-                disabled={loading}
+                disabled={loading || winnerAmount === BigInt(0)}
                 className={cn(
                   "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20",
-                  loading && "opacity-50 cursor-not-allowed"
+                  loading && "opacity-50 cursor-not-allowed",
+                  winnerAmount === BigInt(0) && "opacity-50 cursor-not-allowed"
                 )}
               >
                 {loading ? (
@@ -160,7 +204,7 @@ function LeaderboardRow({
                 ) : (
                   <Trophy className="h-4 w-4 mr-2" />
                 )}
-                Claim {formatEther(winnerAmount)} ETH
+                {winnerAmount === BigInt(0) ? "Already Claimed" : `Claim ${formatEther(winnerAmount)} ETH`}
               </Button>
             </motion.div>
           )}
@@ -203,25 +247,27 @@ function LeaderboardRow({
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {Array(numPurchased).fill(0).map((_, index) => (
-                    <div
-                      key={index}
-                      className="p-3 bg-gray-700/50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={`https://avatar.vercel.sh/${registrant}-${index}.png`} />
-                          <AvatarFallback>{index + 1}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium text-white">Player #{index + 1}</p>
-                          <p className="text-xs text-gray-400">Selected</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                
+                {playersList && playersList.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {playersList.map((player, index) => (
+                      <PlayerCard 
+                        key={`${registrant}-${player.tokenId}`} 
+                        player={player} 
+                        gameAddress={gameAddress}
+                        picAddress={picAddress}
+                      />
+                    ))}
+                  </div>
+                ) : numPurchased > 0 ? (
+                  <div className="p-3 bg-gray-700/30 rounded-lg text-center">
+                    <p className="text-gray-400">Player data is loading...</p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-gray-700/30 rounded-lg text-center">
+                    <p className="text-gray-400">No players purchased yet</p>
+                  </div>
+                )}
               </motion.div>
             </TableCell>
           </motion.tr>
@@ -234,10 +280,29 @@ function LeaderboardRow({
 export default function LeaderboardTable({
   registrants,
   numPlayerPurchased,
+  playersBought,
+  teamScores,
   winner,
   winnerAmount,
-  gameAddress
+  gameAddress,
+  picAddress,
+  gameUnlocked
 }) {
+  // Sort registrants by team score in descending order if we have scores
+  const sortedData = registrants.map((registrant, index) => ({
+    registrant,
+    numPurchased: numPlayerPurchased[index] || 0,
+    teamScore: teamScores[index] || BigInt(0),
+    playersList: playersBought[index] || []
+  })).sort((a, b) => {
+    // First sort by team score (higher first)
+    if (b.teamScore > a.teamScore) return 1;
+    if (b.teamScore < a.teamScore) return -1;
+    
+    // If team scores are equal, sort by number of players purchased (higher first)
+    return b.numPurchased - a.numPurchased;
+  });
+
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-800/50 text-white shadow-sm">
       <Table>
@@ -249,14 +314,18 @@ export default function LeaderboardTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {registrants.map((registrant, index) => (
+          {sortedData.map((item, index) => (
             <LeaderboardRow
-              key={registrant}
-              registrant={registrant}
-              numPurchased={numPlayerPurchased[index]}
-              isWinner={winner === registrant}
+              key={item.registrant}
+              registrant={item.registrant}
+              numPurchased={item.numPurchased}
+              teamScore={item.teamScore}
+              playersList={item.playersList}
+              isWinner={winner === item.registrant}
               winnerAmount={winnerAmount}
               gameAddress={gameAddress}
+              picAddress={picAddress}
+              gameUnlocked={gameUnlocked}
               rank={index + 1}
             />
           ))}

@@ -4,16 +4,25 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { useAccount, useWatchContractEvent } from "wagmi";
-import { writeContract, waitForTransactionReceipt, readContract } from "@wagmi/core";
+import { writeContract, waitForTransactionReceipt, readContract, getPublicClient } from "@wagmi/core";
 import { ContractContext } from "../../../../context/ContractContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Clock, DollarSign, Users, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, Clock, DollarSign, Users, ArrowUp, User } from "lucide-react";
 import { config } from "@/config";
 import GameABI from "../../../../constants/Game.json";
+import AuctionABI from "../../../../constants/Auction.json";
 import { formatEther } from "ethers";
 import { cn } from "@/lib/utils";
+import { Log } from 'viem'
+import { 
+  fetchPlayerDetails as getPlayerDetails, 
+  getAuctionContract as fetchAuctionContract,
+  fetchAuctionState,
+  fetchCurrentBid,
+  fetchPastBidEvents
+} from "@/utils/contractUtils";
 
 interface PageProps {
   gameAddress: string;
@@ -25,6 +34,19 @@ interface BidEvent {
   amount: bigint;
   timestamp: number;
 }
+
+const getImageUrl = (ipfsUrl: string) => {
+  if (!ipfsUrl) return "";
+  
+  // Handle IPFS URLs
+  if (ipfsUrl.startsWith("ipfs://")) {
+    // Try multiple IPFS gateways for better reliability
+    const cid = ipfsUrl.replace("ipfs://", "");
+    return `https://ipfs.io/ipfs/${cid}`;
+  }
+  
+  return ipfsUrl;
+};
 
 const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
   const [bids, setBids] = useState<BidEvent[]>([]);
@@ -40,6 +62,7 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [auctionContract, setAuctionContract] = useState<`0x${string}`>("0x0000000000000000000000000000000000000000" as `0x${string}`);
 
   const { address } = useAccount();
   const router = useRouter();
@@ -55,10 +78,6 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
     fetchTokens,
     currentPlayer,
     fetchcurrentPlayer,
-    fetchPlayerDetails,
-    fetchPlayerBids,
-    fetchCurrentBid,
-    fetchAuctionState,
   } = context;
 
   useEffect(() => {
@@ -82,17 +101,34 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
 
         // First, set up PIC address and wait for it
         await PICAddresssetup(gameAddress);
-        
+
+        // Make sure PICAddress is available before proceeding
+        if (!PICAddress) {
+          console.warn("PICAddress not available yet, retrying later");
+          setLoading(false);
+          return;
+        }
+
+        // Get auction contract address first
+        const auctionContractAddress = await fetchAuctionContract(gameAddress);
+        if (!auctionContractAddress || auctionContractAddress === "0x0000000000000000000000000000000000000000" as `0x${string}`) {
+          console.error("Failed to get auction contract address");
+          setError("Could not find auction contract. Please try again later.");
+          setLoading(false);
+          return;
+        }
+        setAuctionContract(auctionContractAddress as `0x${string}`);
+
         // Then fetch current player count
         await fetchcurrentPlayer(gameAddress);
-        
+
         // Fetch tokens if address is available
         if (address) {
           await fetchTokens(gameAddress, address);
         }
 
-        // Get auction times, state and current bid first
-        const [auctionTimeData, currentAuctionTimeData, auctionStateData, currentBidAmount] = await Promise.all([
+        // Get auction times and state
+        const [auctionTimeData, currentAuctionTimeData, auctionStateData] = await Promise.all([
           readContract(config, {
             address: gameAddress as `0x${string}`,
             abi: GameABI,
@@ -104,26 +140,26 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
             functionName: "s_currentAuctionTime",
           }),
           fetchAuctionState(gameAddress),
-          fetchCurrentBid(gameAddress),
         ]);
 
         setAuctionDuration(Number(auctionTimeData));
         setCurrentAuctionTime(Number(currentAuctionTimeData));
         setAuctionState(auctionStateData);
-        setCurrentBid(currentBidAmount);
 
-        // Then fetch player details and bids
-        const [details, bidsData] = await Promise.all([
-          fetchPlayerDetails(parseInt(tokenId)),
-          fetchPlayerBids(gameAddress, parseInt(tokenId)),
-        ]);
-
+        // Then fetch player details
+        const details = await getPlayerDetails(PICAddress, parseInt(tokenId));
         setPlayerDetails({
           image: details.imageURI,
           name: details.name,
           role: details.role,
         });
-        setBids(bidsData);
+
+        // Now we can safely use auctionContract since it's properly initialized
+        const currentBidAmount = await fetchCurrentBid(gameAddress);
+        setCurrentBid(currentBidAmount);
+        
+        const pastBids = await fetchPastBidEvents(gameAddress, parseInt(tokenId));
+        setBids(pastBids);
 
         // Calculate initial time remaining
         const now = Math.floor(Date.now() / 1000);
@@ -132,29 +168,91 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
 
       } catch (error: any) {
         console.error("Error fetching data:", error);
-        setError(error?.message || "Failed to load player data. Please try again later.");
-        toast.error("Failed to load player data");
+        setError(error.message || "Failed to load player details");
       } finally {
         setLoading(false);
       }
     };
 
-    if (gameAddress && tokenId) {
-      fetchData();
-    }
-  }, [gameAddress, tokenId, address]);
+    fetchData();
+  }, [gameAddress, tokenId, address, PICAddress]);
 
+  // Watch for bid events
   useWatchContractEvent({
-    address: gameAddress as `0x${string}`,
-    abi: GameABI,
-    eventName: "BidPlaced",
-    onLogs: async () => {
-      const [bidsData, currentBidAmount] = await Promise.all([
-        fetchPlayerBids(gameAddress, parseInt(tokenId)),
-        fetchCurrentBid(gameAddress),
-      ]);
-      setBids(bidsData);
-      setCurrentBid(currentBidAmount);
+    address: auctionContract,
+    abi: AuctionABI,
+    eventName: 'HighestBidIncrease',
+    onLogs: async (logs: Log[]) => {
+      const relevantLogs = logs.filter(log => {
+        const args = (log as any).args;
+        return args?.currentPlayer?.toString() === tokenId;
+      });
+      
+      if (relevantLogs.length > 0) {
+        // Refetch all past events to ensure we have the complete history
+        const pastBids = await fetchPastBidEvents(gameAddress, parseInt(tokenId));
+        setBids(pastBids);
+        
+        // Update current bid
+        const currentBidAmount = await fetchCurrentBid(gameAddress);
+        setCurrentBid(currentBidAmount);
+        
+        toast.success("New bid received!");
+      }
+    },
+  });
+
+  // Watch for auction end events
+  useWatchContractEvent({
+    address: auctionContract,
+    abi: AuctionABI,
+    eventName: 'AuctionEnded',
+    onLogs: async (logs: Log[]) => {
+      const relevantLogs = logs.filter(log => {
+        const args = (log as any).args;
+        return args?.currentPlayer?.toString() === tokenId;
+      });
+      
+      if (relevantLogs.length > 0) {
+        const args = (relevantLogs[0] as any).args;
+        setCurrentBid(args.amount);
+        setAuctionState(false);
+        
+        // Refetch bid history to ensure it's up to date
+        const pastBids = await fetchPastBidEvents(gameAddress, parseInt(tokenId));
+        setBids(pastBids);
+        
+        toast.success("Auction has ended!");
+      }
+    },
+  });
+
+  // Watch for auction start events
+  useWatchContractEvent({
+    address: auctionContract,
+    abi: AuctionABI,
+    eventName: 'AuctionStarted',
+    onLogs: async (logs: Log[]) => {
+      const relevantPlayer = await readContract(config, {
+        address: gameAddress as `0x${string}`,
+        abi: GameABI,
+        functionName: "s_currentPlayer",
+      });
+      
+      if (relevantPlayer as String === tokenId) {
+        setAuctionState(true);
+        
+        // Update current auction time
+        const currentAuctionTimeData = await readContract(config, {
+          address: gameAddress as `0x${string}`,
+          abi: GameABI,
+          functionName: "s_currentAuctionTime",
+        });
+        
+        setCurrentAuctionTime(Number(currentAuctionTimeData));
+        
+        toast.success("Auction has started!");
+      }
     },
   });
 
@@ -176,19 +274,60 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
       if (typeof result === 'string') {
         await waitForTransactionReceipt(config, { hash: result });
       }
-      
+
       toast.success("Bid placed successfully", { id: "bidding" });
-      
-      const [bidsData, currentBidAmount] = await Promise.all([
-        fetchPlayerBids(gameAddress, parseInt(tokenId)),
-        fetchCurrentBid(gameAddress),
-      ]);
-      setBids(bidsData);
+
+      // Refetch bid history and current bid
+      const pastBids = await fetchPastBidEvents(gameAddress, parseInt(tokenId));
+      setBids(pastBids);
+      const currentBidAmount = await fetchCurrentBid(gameAddress);
       setCurrentBid(currentBidAmount);
+      
     } catch (err) {
       console.error(err);
       toast.error("Failed to place bid", { id: "bidding" });
     }
+  };
+
+  const getPlayerStatus = () => {
+    const playerId = parseInt(tokenId);
+    if (playerId < currentPlayer) {
+      return {
+        status: 'AUCTIONED',
+        label: 'Auctioned',
+        color: 'bg-red-500/10 text-red-500'
+      };
+    } else if (playerId === currentPlayer) {
+      return {
+        status: 'CURRENT',
+        label: 'Current Auction',
+        color: 'bg-green-500/10 text-green-500'
+      };
+    } else {
+      return {
+        status: 'UPCOMING',
+        label: 'Upcoming',
+        color: 'bg-blue-500/10 text-blue-500'
+      };
+    }
+  };
+
+  const isAuctionActive = () => {
+    const playerId = parseInt(tokenId);
+    const status = getPlayerStatus();
+    return status.status === 'CURRENT' && auctionState && timeRemaining > 0;
+  };
+
+  const formatTimeRemaining = () => {
+    if (timeRemaining <= 0) {
+      return "Auction Ended";
+    }
+
+    const hours = Math.floor(timeRemaining / 3600);
+    const minutes = Math.floor((timeRemaining % 3600) / 60);
+    const seconds = timeRemaining % 60;
+
+    return `${hours}h ${minutes}m ${seconds}s`;
   };
 
   if (loading) {
@@ -210,8 +349,6 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
     );
   }
 
-  const isAuctionActive = parseInt(tokenId) >= currentPlayer && auctionState;
-
   return (
     <div className="min-h-screen bg-gray-900 pt-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -219,55 +356,68 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-8"
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           <div className="relative aspect-square rounded-xl overflow-hidden">
-            <Image
-              src={`${playerDetails.image.replace("ipfs://", "https://ipfs.io/ipfs/")}/${playerDetails.name
-                .split(" ")
-                .join("%20")}.png`}
-              alt={playerDetails.name}
-              fill
-              className="object-cover transition-transform duration-300 hover:scale-105"
-              unoptimized
-            />
+            {playerDetails.image && (
+              <Image
+                src={getImageUrl(playerDetails.image)}
+                alt={playerDetails.name}
+                fill
+                className="object-cover transition-transform duration-300 hover:scale-105"
+                unoptimized
+                onError={(e) => {
+                  console.error("Error loading image:", playerDetails.image);
+                  (e.target as HTMLImageElement).src = "/assets/placeholder.png";
+                }}
+              />
+            )}
           </div>
 
-          <div className="flex flex-col justify-between">
+          <div className="flex flex-col justify-between space-y-4">
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 text-transparent bg-clip-text">
+              <div className="flex items-center justify-between mb-3">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 text-transparent bg-clip-text">
                   {playerDetails.name.toUpperCase()}
                 </h1>
                 <div className="flex items-center space-x-2">
                   <Badge className={cn(
                     "px-3 py-1 text-sm",
-                    isAuctionActive
+                    isAuctionActive()
                       ? "bg-green-500/10 text-green-500"
                       : "bg-red-500/10 text-red-500"
                   )}>
-                    {isAuctionActive ? "AVAILABLE" : "SOLD"}
+                    {isAuctionActive() ? "AUCTION ACTIVE" : getPlayerStatus().label.toUpperCase()}
                   </Badge>
-                  {isAuctionActive && timeRemaining > 0 && (
+                  {isAuctionActive() && (
                     <Badge className="px-3 py-1 text-sm bg-purple-500/10 text-purple-500">
                       <Clock className="w-3 h-3 mr-1" />
-                      {Math.floor(timeRemaining / 60)}m {timeRemaining % 60}s
+                      {formatTimeRemaining()}
                     </Badge>
                   )}
                 </div>
               </div>
-              
-              <p className="text-gray-400 mb-6">{playerDetails.role}</p>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <p className="text-gray-400 mb-4">{playerDetails.role}</p>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="flex items-center p-4">
                     <DollarSign className="w-5 h-5 mr-2 text-purple-500" />
                     <div>
                       <p className="text-sm text-gray-400">Current Bid</p>
-                      <p className="text-lg font-semibold text-white">
-                        {formatEther(currentBid)} ETH
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-lg font-semibold text-white">
+                          {Number(currentBid)}
+                        </p>
+                        <Image
+                          src="/assets/currency.png"
+                          alt="currency"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6"
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -284,10 +434,10 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
               </div>
             </div>
 
-            <Card className="bg-gray-800 border-gray-700 mb-6">
+            <Card className="bg-gray-800 border-gray-700 mb-4">
               <CardContent className="p-4">
-                <h2 className="text-xl font-semibold text-white mb-4">Bid History</h2>
-                <div className="space-y-3 max-h-60 overflow-y-auto">
+                <h2 className="text-xl font-semibold text-white mb-3">Bid History</h2>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
                   {bids.length === 0 ? (
                     <div className="text-center text-gray-400 py-4">
                       No bids placed yet
@@ -302,22 +452,28 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
                           exit={{ opacity: 0, y: 10 }}
                           className="flex items-center justify-between bg-gray-700/30 rounded-lg p-3"
                         >
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center gap-2">
+                            <div className="bg-gray-700 rounded-full p-1.5">
+                              <User className="h-4 w-4 text-gray-300" />
+                            </div>
                             <div className="text-sm">
-                              <p className="text-gray-300">
+                              <p className="text-gray-300 font-medium">
                                 {bid.bidder.slice(0, 6)}...{bid.bidder.slice(-4)}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {new Date(bid.timestamp * 1000).toLocaleString()}
+                                Block #{bid.timestamp}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-white font-medium">
-                              {formatEther(bid.amount)} ETH
+                          <div className="flex items-center">
+                            <span className="text-white font-medium mr-2">
+                              {Number(bid.amount)} tokens
                             </span>
                             {index === 0 && (
-                              <ArrowUp className="w-4 h-4 text-green-500" />
+                              <Badge className="bg-green-500/10 text-green-500 ml-1">
+                                <ArrowUp className="w-3 h-3 mr-1" />
+                                Highest
+                              </Badge>
                             )}
                           </div>
                         </motion.div>
@@ -330,21 +486,21 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
 
             <Button
               onClick={placeBid}
-              disabled={!isAuctionActive || !address || timeRemaining <= 0}
+              disabled={!isAuctionActive() || !address || timeRemaining <= 0}
               className={cn(
-                "w-full py-6 text-lg font-semibold",
-                isAuctionActive && timeRemaining > 0
+                "w-full py-5 text-lg font-semibold",
+                isAuctionActive() && timeRemaining > 0
                   ? "bg-purple-500 hover:bg-purple-600 text-white"
                   : "bg-gray-700 text-gray-400 cursor-not-allowed"
               )}
             >
               {!address
                 ? "Connect Wallet to Bid"
-                : !isAuctionActive
-                ? "Auction Ended"
-                : timeRemaining <= 0
-                ? "Time's Up"
-                : `Place Bid (${formatEther(currentBid)} ETH)`}
+                : !isAuctionActive()
+                  ? getPlayerStatus().label
+                  : timeRemaining <= 0
+                    ? "Time's Up"
+                    : `Place Bid (${Number(currentBid)})`}
             </Button>
           </div>
         </motion.div>

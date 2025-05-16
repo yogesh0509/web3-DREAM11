@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import { useRouter } from 'next/router';
 import Countdown from 'react-countdown';
-import { parseEther } from 'ethers';
+import { parseEther, formatEther } from 'ethers';
 import { motion } from "framer-motion";
-import { Clock, Trophy, Coins, Users } from "lucide-react";
+import { Clock, Trophy, Coins, Users, AlertCircle, Wallet } from "lucide-react";
 import contractABI from "../../constants/Game.json";
 import { config } from "../../config";
 
@@ -23,6 +23,10 @@ interface GameData {
   auctionState: boolean;
   currentAuctionTime: number;
   auctionDuration: number;
+  gameState: 'REGISTRATION' | 'AUCTION_ACTIVE' | 'BETWEEN_AUCTIONS' | 'GAME_COMPLETE';
+  currentPlayerId: number;
+  totalBuyers: number;
+  auctionablePlayers: number;
 }
 
 const CountdownRenderer = ({ days, hours, minutes, seconds, completed }: {
@@ -57,36 +61,51 @@ export default function ContestCard({ Game }: ContestCardProps) {
     totalPlayers: 0,
     currentPlayers: 0,
     prizePool: "0",
-    entryFee: "0.1",
+    entryFee: "0",
     isRegistered: false,
     auctionState: false,
     currentAuctionTime: 0,
-    auctionDuration: 0
+    auctionDuration: 0,
+    gameState: 'REGISTRATION',
+    currentPlayerId: 0,
+    totalBuyers: 0,
+    auctionablePlayers: 0
   });
   const [loading, setLoading] = useState(true);
   const { address } = useAccount();
   const router = useRouter();
+  const [registrationFee, setRegistrationFee] = useState<string>("0");
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
 
   useEffect(() => {
-    console.log(Game);
     if (Game) {
       fetchGameData();
+      // Update every 30 seconds instead of every second
+      const interval = setInterval(() => {
+        const now = Date.now();
+        if (now - lastUpdate >= 30000) { // Only update if 30 seconds have passed
+          fetchGameData();
+          setLastUpdate(now);
+        }
+      }, 1000);
+      return () => clearInterval(interval);
     }
-  }, [Game, address]);
+  }, [Game, address, lastUpdate]);
 
   const fetchGameData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch all game data in parallel
       const [
         auctionTime,
         currentAuctionTime,
         totalPlayers,
         currentPlayers,
-        prizePool,
         auctionState,
-        isRegistered
+        isRegistered,
+        registrationFeeRaw,
+        unlock,
+        buyers,
+        totalAuctionablePlayers
       ] = await Promise.all([
         readContract(config, {
           address: Game as `0x${string}`,
@@ -111,11 +130,6 @@ export default function ContestCard({ Game }: ContestCardProps) {
         readContract(config, {
           address: Game as `0x${string}`,
           abi: contractABI,
-          functionName: "s_TreasuryFunds",
-        }),
-        readContract(config, {
-          address: Game as `0x${string}`,
-          abi: contractABI,
           functionName: "s_auctionState",
         }),
         address ? readContract(config, {
@@ -123,27 +137,91 @@ export default function ContestCard({ Game }: ContestCardProps) {
           abi: contractABI,
           functionName: "s_buyercheck",
           args: [address],
-        }) : Promise.resolve(false)
+        }) : Promise.resolve(false),
+        readContract(config, {
+          address: Game as `0x${string}`,
+          abi: contractABI,
+          functionName: "REGISTRATION_FEE",
+        }),
+        readContract(config, {
+          address: Game as `0x${string}`,
+          abi: contractABI,
+          functionName: "s_unlock",
+        }),
+        readContract(config, {
+          address: Game as `0x${string}`,
+          abi: contractABI,
+          functionName: "getBuyers",
+        }),
+        readContract(config, {
+          address: Game as `0x${string}`,
+          abi: contractABI,
+          functionName: "s_totalplayerCount",
+        })
       ]);
 
-      const now = Math.floor(Date.now() / 1000);
       const auctionDuration = Number(auctionTime);
       const currentAuctionTimeNum = Number(currentAuctionTime);
+      const currentPlayersNum = Number(currentPlayers);
+      const totalPlayersNum = Number(totalPlayers);
+      const isAuctionState = Boolean(auctionState);
+      const isUnlocked = Boolean(unlock);
+      const totalBuyers = (buyers as string[]).length;
+      const registrationFeeEth = formatEther(registrationFeeRaw as bigint);
       
-      // Calculate next auction time based on current auction time and duration
-      const nextAuctionTime = currentAuctionTimeNum + auctionDuration;
+      // Calculate prize pool (70% of total registration fees)
+      const totalRegistrationFees = parseEther(registrationFeeEth) * BigInt(totalBuyers);
+      const prizePool = (totalRegistrationFees * BigInt(70)) / BigInt(100);
 
-      setGameData({
-        startTime: currentAuctionTimeNum * 1000, // Convert to milliseconds
-        endTime: nextAuctionTime * 1000, // Convert to milliseconds
-        totalPlayers: Number(totalPlayers),
-        currentPlayers: Number(currentPlayers),
-        prizePool: parseEther((prizePool as bigint).toString()).toString(),
-        entryFee: "0.1",
-        isRegistered: Boolean(isRegistered),
-        auctionState: Boolean(auctionState),
-        currentAuctionTime: currentAuctionTimeNum,
-        auctionDuration: auctionDuration
+      // Calculate game state
+      let gameState: GameData['gameState'];
+      if (isUnlocked) {
+        gameState = 'GAME_COMPLETE';
+      } else if (isAuctionState) {
+        gameState = 'AUCTION_ACTIVE';
+      } else if (currentPlayersNum < totalPlayersNum) {
+        gameState = 'BETWEEN_AUCTIONS';
+      } else {
+        gameState = 'REGISTRATION';
+      }
+
+      // Calculate next auction time
+      const nextAuctionTime = currentAuctionTimeNum + auctionDuration;
+      setRegistrationFee(registrationFeeEth);
+
+      setGameData(prev => {
+        // Only update if there are actual changes
+        if (
+          prev.startTime === currentAuctionTimeNum * 1000 &&
+          prev.endTime === nextAuctionTime * 1000 &&
+          prev.totalPlayers === totalPlayersNum &&
+          prev.currentPlayers === currentPlayersNum &&
+          prev.prizePool === formatEther(prizePool) &&
+          prev.isRegistered === Boolean(isRegistered) &&
+          prev.auctionState === isAuctionState &&
+          prev.gameState === gameState &&
+          prev.currentPlayerId === currentPlayersNum &&
+          prev.totalBuyers === totalBuyers &&
+          prev.auctionablePlayers === Number(totalAuctionablePlayers)
+        ) {
+          return prev;
+        }
+        return {
+          startTime: currentAuctionTimeNum * 1000,
+          endTime: nextAuctionTime * 1000,
+          totalPlayers: totalPlayersNum,
+          currentPlayers: currentPlayersNum,
+          prizePool: formatEther(prizePool),
+          entryFee: registrationFeeEth,
+          isRegistered: Boolean(isRegistered),
+          auctionState: isAuctionState,
+          currentAuctionTime: currentAuctionTimeNum,
+          auctionDuration: auctionDuration,
+          gameState,
+          currentPlayerId: currentPlayersNum,
+          totalBuyers: totalBuyers,
+          auctionablePlayers: Number(totalAuctionablePlayers)
+        };
       });
     } catch (error) {
       console.error("Error fetching game data:", error);
@@ -165,7 +243,7 @@ export default function ContestCard({ Game }: ContestCardProps) {
         address: Game as `0x${string}`,
         abi: contractABI,
         functionName: "register",
-        value: parseEther("0.1"),
+        value: parseEther(registrationFee),
       });
 
       if (typeof result === 'string') {
@@ -181,6 +259,40 @@ export default function ContestCard({ Game }: ContestCardProps) {
 
   const enter = () => {
     router.push(`/contests/${Game}`);
+  };
+
+  const getGameStateMessage = () => {
+    switch (gameData.gameState) {
+      case 'REGISTRATION':
+        return "Registration Open - Join Now!";
+      case 'AUCTION_ACTIVE':
+        return `Auction Active - Player ${gameData.currentPlayerId + 1} of ${gameData.totalPlayers}`;
+      case 'BETWEEN_AUCTIONS':
+        return `Waiting for Next Auction - Player ${gameData.currentPlayerId + 1} of ${gameData.totalPlayers}`;
+      case 'GAME_COMPLETE':
+        return "Game Complete - Results Pending";
+      default:
+        return "";
+    }
+  };
+
+  const getTimeMessage = () => {
+    const now = Math.floor(Date.now() / 1000);
+    const timeRemaining = gameData.endTime / 1000 - now;
+
+    if (gameData.gameState === 'GAME_COMPLETE') {
+      return "Game has ended";
+    }
+
+    if (timeRemaining <= 0) {
+      return "Time's up!";
+    }
+
+    const hours = Math.floor(timeRemaining / 3600);
+    const minutes = Math.floor((timeRemaining % 3600) / 60);
+    const seconds = timeRemaining % 60;
+
+    return `${hours}h ${minutes}m ${seconds}s remaining`;
   };
 
   if (loading) {
@@ -231,6 +343,16 @@ export default function ContestCard({ Game }: ContestCardProps) {
                 <span className="text-white font-bold">Players:</span>
                 <span className="text-white">{gameData.currentPlayers}/{gameData.totalPlayers}</span>
               </div>
+              <div className="flex items-center gap-2 mt-2">
+                <Wallet className="w-5 h-5 text-gray-400" />
+                <span className="text-white font-bold">Game:</span>
+                <span className="text-white text-xs truncate">{Game}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <Users className="w-5 h-5 text-blue-400" />
+                <span className="text-white font-bold">Registered Participants:</span>
+                <span className="text-white">{gameData.totalBuyers}</span>
+              </div>
             </div>
 
             {/* Bottom Section */}
@@ -239,21 +361,26 @@ export default function ContestCard({ Game }: ContestCardProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-blue-400" />
-                    <span className="text-gray-300">Starts in:</span>
+                    <span className="text-gray-300">Current Status:</span>
                   </div>
-                  <span className="text-white font-medium">
-                    <Countdown date={gameData.startTime} renderer={CountdownRenderer} />
-                  </span>
+                  <span className="text-white font-medium">{getGameStateMessage()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-purple-400" />
-                    <span className="text-gray-300">Ends in:</span>
+                    <span className="text-gray-300">Time Remaining:</span>
                   </div>
-                  <span className="text-white font-medium">
-                    <Countdown date={gameData.endTime} renderer={CountdownRenderer} />
-                  </span>
+                  <span className="text-white font-medium">{getTimeMessage()}</span>
                 </div>
+                {gameData.gameState === 'AUCTION_ACTIVE' && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-400" />
+                      <span className="text-gray-300">Current Player:</span>
+                    </div>
+                    <span className="text-white font-medium">Player {gameData.currentPlayerId + 1}</span>
+                  </div>
+                )}
               </div>
 
               {gameData.isRegistered ? (
@@ -261,15 +388,17 @@ export default function ContestCard({ Game }: ContestCardProps) {
                   className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-medium py-2 px-4 rounded-lg transform transition-all duration-200 hover:scale-[1.02]"
                   onClick={enter}
                 >
-                  Enter Contest
+                  {gameData.gameState === 'GAME_COMPLETE' ? 'View Results' : 'Enter Contest'}
                 </Button>
               ) : (
                 <Button 
                   className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-medium py-2 px-4 rounded-lg transform transition-all duration-200 hover:scale-[1.02]"
                   onClick={register}
-                  disabled={gameData.auctionState}
+                  disabled={gameData.auctionState || gameData.gameState === 'GAME_COMPLETE'}
                 >
-                  {gameData.auctionState ? "Auction in Progress" : "Register Now"}
+                  {gameData.auctionState ? "Auction in Progress" : 
+                   gameData.gameState === 'GAME_COMPLETE' ? "Game Complete" : 
+                   "Register Now"}
                 </Button>
               )}
             </div>

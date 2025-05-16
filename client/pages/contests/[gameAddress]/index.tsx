@@ -1,18 +1,16 @@
 import React, { useEffect, useState, useContext } from "react"
 import { useRouter } from 'next/router'
-import { readContract } from "@wagmi/core"
 import { useAccount, useWatchContractEvent } from "wagmi"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2, Search } from "lucide-react"
+import { Loader2, Search, Clock } from "lucide-react"
 import { ContractContext } from "../../../context/ContractContext"
 import { PlayerCard } from "../../../components/Card/PlayerCard"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { config } from "../../../config"
 import { Card, CardContent } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
 import GameABI from "../../../constants/Game.json"
-import PICABI from "../../../constants/PIC.json"
+import { fetchPlayerDetails, fetchTotalPlayers } from "@/utils/contractUtils"
+import { toast } from "react-hot-toast"
 
 interface Player {
   imageURI: string
@@ -49,29 +47,62 @@ export default function ContestsPage({ gameAddress }: PageProps) {
     fetchTokens, 
     currentPlayer, 
     fetchcurrentPlayer,
-    fetchPlayerDetails,
-    fetchTotalPlayers,
   } = contractContext
 
-  useEffect(() => {
-    const initializeData = async () => {
-      try {
-        setLoading(true)
-        await PICAddresssetup(gameAddress)
-        await fetchcurrentPlayer(gameAddress)
-        if (address) {
-          await fetchTokens(gameAddress, address)
-        }
-        if (PICAddress) {
-          await fetchPlayers()
-        }
-      } catch (error) {
-        console.error("Error initializing data:", error)
-      } finally {
-        setLoading(false)
+  const loadPlayers = async () => {
+    try {
+      setLoading(true)
+      
+      // Set up PIC address first
+      await PICAddresssetup(gameAddress)
+      await fetchcurrentPlayer(gameAddress)
+      if (address) {
+        await fetchTokens(gameAddress, address)
       }
+      
+      // Make sure PICAddress is available before proceeding
+      if (!PICAddress) {
+        console.warn("PICAddress not available yet, retrying later");
+        setLoading(false);
+        return;
+      }
+      
+      let totalPlayers;
+      try {
+        totalPlayers = await fetchTotalPlayers(PICAddress);
+      } catch (error) {
+        console.error("Error fetching total players:", error);
+        totalPlayers = 0;
+      }
+      
+      const playersArray = [];
+      // Start from index 0 instead of 1, as the contract indexes players from 0
+      for (let i = 0; i < totalPlayers && i < 100; i++) { // Add upper limit to prevent too many requests
+        try {
+          const playerData = await fetchPlayerDetails(PICAddress, i);
+          if (playerData && playerData.name) { // Verify we have valid data
+            playersArray.push({
+              ...playerData,
+              id: i // Ensure ID is set correctly
+            });
+          }
+        } catch (error) {
+          console.error(`Error fetching player ${i}:`, error);
+          // Don't add invalid players to the array
+        }
+      }
+      
+      setPlayers(playersArray);
+    } catch (error) {
+      console.error("Error loading players:", error);
+      toast.error("Failed to load players. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    initializeData()
+  }
+
+  useEffect(() => {
+    loadPlayers()
   }, [PICAddress, gameAddress, address])
 
   useEffect(() => {
@@ -102,22 +133,31 @@ export default function ContestsPage({ gameAddress }: PageProps) {
     },
   })
 
-  const fetchPlayers = async () => {
-    try {
-      const totalPlayers = await fetchTotalPlayers()
-      const playerPromises = Array.from({ length: totalPlayers }, (_, i) => 
-        fetchPlayerDetails(i)
-      )
-      const playerData = await Promise.all(playerPromises)
-      setPlayers(playerData)
-    } catch (error) {
-      console.error("Error fetching players:", error)
-    }
-  }
-
   const filteredPlayers = players.filter(player => 
     player && player.name && player.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getPlayerStatus = (player: Player) => {
+    if (player.id < currentPlayer) {
+      return {
+        status: 'AUCTIONED' as const,
+        label: 'Auctioned',
+        color: 'bg-red-500/10 text-red-500'
+      };
+    } else if (player.id === currentPlayer) {
+      return {
+        status: 'CURRENT' as const,
+        label: 'Current Auction',
+        color: 'bg-green-500/10 text-green-500'
+      };
+    } else {
+      return {
+        status: 'UPCOMING' as const,
+        label: 'Upcoming',
+        color: 'bg-blue-500/10 text-blue-500'
+      };
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 pt-20">
@@ -130,11 +170,6 @@ export default function ContestsPage({ gameAddress }: PageProps) {
                   <h2 className="text-2xl font-bold text-white mb-2">
                     Player Auction
                   </h2>
-                  <p className="text-gray-400">
-                    {gameState.auctionState
-                      ? "Auction is currently in progress"
-                      : "Auction will start soon"}
-                  </p>
                 </div>
                 <div className="w-full md:w-auto">
                   <div className="relative">
@@ -171,16 +206,26 @@ export default function ContestsPage({ gameAddress }: PageProps) {
               exit={{ opacity: 0 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             >
-              {filteredPlayers.map((player, index) => (
-                <PlayerCard
-                  key={player.id}
-                  image={player.imageURI}
-                  id={index}
-                  role={player.role}
-                  name={player.name}
-                  currentPlayer={currentPlayer}
-                />
-              ))}
+              {filteredPlayers.map((player) => {
+                const status = getPlayerStatus(player);
+                return (
+                  <motion.div
+                    key={player.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * (player.id % 10) }} // Use modulo to limit delay
+                  >
+                    <PlayerCard
+                      image={player.imageURI}
+                      id={player.id}
+                      role={player.role}
+                      name={player.name}
+                      currentPlayer={currentPlayer}
+                      status={status}
+                    />
+                  </motion.div>
+                );
+              })}
             </motion.div>
           ) : (
             <motion.div
@@ -191,7 +236,7 @@ export default function ContestsPage({ gameAddress }: PageProps) {
             >
               <h3 className="text-xl text-gray-400 mb-4">No players found</h3>
               <Button 
-                onClick={fetchPlayers}
+                onClick={loadPlayers}
                 className="bg-purple-600 hover:bg-purple-700"
               >
                 Refresh Players

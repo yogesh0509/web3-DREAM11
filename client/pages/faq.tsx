@@ -10,11 +10,11 @@ const faqs = [
   },
   {
     question: "How do I get started?",
-    answer: "First, install MetaMask and create a wallet. Then, get some MATIC tokens for transactions. Finally, browse available contests and register for one that interests you."
+    answer: "First, install MetaMask and create a wallet. Then, get some ETH tokens for transactions. Finally, browse available contests and register for one that interests you."
   },
   {
-    question: "What is MATIC and why do I need it?",
-    answer: "MATIC is the native cryptocurrency of the Polygon network. You need it to pay for transaction fees and participate in player auctions on our platform."
+    question: "What is ETH and why do I need it?",
+    answer: "ETH is the native cryptocurrency of the Polygon network. You need it to pay for transaction fees and participate in player auctions on our platform."
   },
   {
     question: "How do player auctions work?",
@@ -22,7 +22,7 @@ const faqs = [
   },
   {
     question: "How are rewards distributed?",
-    answer: "Rewards are distributed based on your team's performance. The better your team performs, the larger your share of the prize pool. Rewards are automatically distributed through smart contracts."
+    answer: "Rewards are distributed based on your team's performance. The better your team performs, the larger your share of the prize pool. Rewards are autoETHally distributed through smart contracts."
   },
   {
     question: "Is my wallet secure?",
@@ -34,7 +34,7 @@ const faqs = [
   },
   {
     question: "Can I withdraw my tokens at any time?",
-    answer: "Yes, you can withdraw your tokens at any time, but you'll need to pay a small gas fee for the transaction. Make sure you have enough MATIC to cover the gas fees."
+    answer: "Yes, you can withdraw your tokens at any time, but you'll need to pay a small gas fee for the transaction. Make sure you have enough ETH to cover the gas fees."
   }
 ];
 

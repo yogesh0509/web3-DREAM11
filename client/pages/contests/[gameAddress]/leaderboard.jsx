@@ -9,9 +9,21 @@ import { ContractContext } from "@/context/ContractContext"
 import LeaderboardTable from "@/components/LeaderboardTable"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Trophy, Crown, Loader2, AlertCircle } from "lucide-react"
+import { readContract } from "@wagmi/core";
+import { config } from "../../../config";
+import GameABI from "../../../constants/Game.json";
+import { Search, Trophy, Crown, Loader2, AlertCircle, ClipboardCheck } from "lucide-react"
 import { formatEther } from "ethers"
 import { cn } from "@/lib/utils"
+import { 
+  fetchBuyers, 
+  fetchWinner, 
+  fetchWinnerFunds, 
+  fetchBuyerTransactions, 
+  fetchPlayersBought, 
+  fetchTeamScore,
+  getPICContract
+} from "@/utils/contractUtils"
 
 export default function Leaderboard({ GameAddress }) {
   const { address } = useAccount()
@@ -21,11 +33,14 @@ export default function Leaderboard({ GameAddress }) {
   const [registrants, setRegistrants] = useState([])
   const [numPlayerPurchased, setNumPlayerPurchased] = useState([])
   const [playersBought, setPlayersBought] = useState([])
+  const [teamScores, setTeamScores] = useState([])
   const [winner, setWinner] = useState("")
   const [winnerAmount, setWinnerAmount] = useState(BigInt(0))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [picAddress, setPicAddress] = useState("")
+  const [gameUnlocked, setGameUnlocked] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -33,29 +48,63 @@ export default function Leaderboard({ GameAddress }) {
         setLoading(true)
         setError(null)
 
+        // Get PIC contract address
+        const picContractAddress = await getPICContract(GameAddress)
+        setPicAddress(picContractAddress)
+
+        // Check if game is unlocked (winner determined)
+        const unlockStatus = await readContract(config, {
+          address: GameAddress,
+          abi: GameABI,
+          functionName: "s_unlock",
+        })
+        
+        setGameUnlocked(Boolean(unlockStatus))
+
         const [
           buyers,
           winnerAddress,
         ] = await Promise.all([
-          context.fetchBuyers(GameAddress),
-          context.fetchWinner(GameAddress),
+          fetchBuyers(GameAddress),
+          fetchWinner(GameAddress),
         ])
 
         setRegistrants(buyers)
         setWinner(winnerAddress)
 
         if (winnerAddress !== "0x0000000000000000000000000000000000000000") {
-          const funds = await context.fetchWinnerFunds(GameAddress, winnerAddress)
+          const funds = await fetchWinnerFunds(GameAddress, winnerAddress)
           setWinnerAmount(funds)
         }
 
+        // Get player purchase counts
         const playerDataPromises = buyers.map(async (player) => {
-          const count = await context.fetchBuyerTransactions(GameAddress, player)
+          const count = await fetchBuyerTransactions(GameAddress, player)
           return count
         })
 
-        const playerData = await Promise.all(playerDataPromises)
+        // Get team scores for each buyer
+        const teamScorePromises = buyers.map(async (player) => {
+          const score = await fetchTeamScore(GameAddress, player)
+          return score
+        })
+
+        // Get players bought by each buyer
+        const playersBoughtPromises = buyers.map(async (player) => {
+          const playerData = await fetchPlayersBought(GameAddress, player)
+          return playerData
+        })
+
+        const [playerData, scores, boughtPlayers] = await Promise.all([
+          Promise.all(playerDataPromises),
+          Promise.all(teamScorePromises),
+          Promise.all(playersBoughtPromises)
+        ])
+
         setNumPlayerPurchased(playerData)
+        setTeamScores(scores)
+        setPlayersBought(boughtPlayers)
+
       } catch (error) {
         console.error("Error initializing leaderboard:", error)
         setError("Failed to load leaderboard data")
@@ -110,12 +159,24 @@ export default function Leaderboard({ GameAddress }) {
           </div>
           
           <div className="flex items-center gap-4">
-            {winner !== "0x0000000000000000000000000000000000000000" && (
-              <div className="flex items-center gap-2 bg-yellow-500/10 text-yellow-500 px-4 py-2 rounded-full">
-                <Crown className="h-5 w-5" />
-                <span className="font-semibold">
-                  Winner: {winner.slice(0, 6)}...{winner.slice(-4)} ({formatEther(winnerAmount)} ETH)
-                </span>
+            {gameUnlocked ? (
+              winner !== "0x0000000000000000000000000000000000000000" ? (
+                <div className="flex items-center gap-2 bg-yellow-500/10 text-yellow-500 px-4 py-2 rounded-full">
+                  <Crown className="h-5 w-5" />
+                  <span className="font-semibold">
+                    Winner: {winner.slice(0, 6)}...{winner.slice(-4)} ({formatEther(winnerAmount)} ETH)
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-gray-500/10 text-gray-400 px-4 py-2 rounded-full">
+                  <ClipboardCheck className="h-5 w-5" />
+                  <span className="font-semibold">Game Complete - No Winner Determined</span>
+                </div>
+              )
+            ) : (
+              <div className="flex items-center gap-2 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-full">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="font-semibold">Winner Being Determined...</span>
               </div>
             )}
             <div className="relative">
@@ -141,9 +202,12 @@ export default function Leaderboard({ GameAddress }) {
             registrants={filteredRegistrants}
             numPlayerPurchased={numPlayerPurchased}
             playersBought={playersBought}
+            teamScores={teamScores}
             winner={winner}
             winnerAmount={winnerAmount}
             gameAddress={GameAddress}
+            picAddress={picAddress}
+            gameUnlocked={gameUnlocked}
           />
         </motion.div>
       </div>

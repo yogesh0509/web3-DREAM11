@@ -7,9 +7,9 @@ import { GamepadIcon, Trophy, Users, Coins, Loader2, RefreshCw, Wallet } from 'l
 import { motion, AnimatePresence } from "framer-motion";
 import ContestCard from "../components/Card/ContestCard.tsx";
 import { config } from "../config";
+import GameABI from "../constants/Game.json";
 import contractABI from "../constants/GameFactory.json";
-import { formatEther } from "ethers";
-import Link from 'next/link';
+import { formatEther, parseEther } from "ethers";
 
 export default function Index() {
   const { address } = useAccount();
@@ -20,12 +20,23 @@ export default function Index() {
     totalPlayers: 0,
     totalPrizes: BigInt(0)
   });
+  const [lastUpdate, setLastUpdate] = useState(0);
 
   const Contractaddress = process.env.NEXT_PUBLIC_GAME_FACTORY_CONTRACT_ADDRESS;
+  const REGISTRATION_FEE = parseEther("0.001"); // 0.001 ETH registration fee
 
   useEffect(() => {
     fetchContests();
-  }, []);
+    // Update every 30 seconds instead of every second
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastUpdate >= 30000) { // Only update if 30 seconds have passed
+        fetchContests();
+        setLastUpdate(now);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lastUpdate]);
 
   async function fetchContests() {
     try {
@@ -43,21 +54,20 @@ export default function Index() {
 
       await Promise.all(gameAddresses.map(async (gameAddress) => {
         try {
-          const [currentPlayers, prizePool] = await Promise.all([
+          const [buyers] = await Promise.all([
             readContract(config, {
               address: gameAddress,
               abi: GameABI,
-              functionName: "s_currentplayercount",
-            }),
-            readContract(config, {
-              address: gameAddress,
-              abi: GameABI,
-              functionName: "s_TreasuryFunds",
-            }),
+              functionName: "getBuyers",
+            })
           ]);
 
-          totalPlayers += Number(currentPlayers);
-          totalPrizes += BigInt(prizePool.toString());
+          const registeredPlayers = Array.isArray(buyers) ? buyers.length : 0;
+          totalPlayers += registeredPlayers;
+          
+          // Calculate prize pool for this game (70% of registration fees)
+          const gamePrizePool = (REGISTRATION_FEE * BigInt(registeredPlayers) * BigInt(70)) / BigInt(100);
+          totalPrizes += gamePrizePool;
         } catch (error) {
           console.error(`Error fetching stats for game ${gameAddress}:`, error);
         }
@@ -83,7 +93,7 @@ export default function Index() {
       color: "from-violet-500 to-purple-600" 
     },
     { 
-      label: "TOTAL PLAYERS", 
+      label: "TOTAL PARTICIPANTS", 
       value: stats.totalPlayers.toString(), 
       icon: Users, 
       color: "from-pink-500 to-rose-600" 
@@ -97,7 +107,7 @@ export default function Index() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 pt-16 md:pt-20">
+    <div className="flex min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
       {/* Sidebar */}
       <motion.div
         initial={{ x: -300 }}
