@@ -231,9 +231,19 @@ contract Game is FunctionsClient, AutomationCompatibleInterface, Ownable {
             (block.timestamp - s_currentAuctionTime >= s_auctionTime) &&
             !s_unlock
         ) {
-            string[] memory args = new string[](2);
-            args[0] = addressToString(address(s_PICContract));
-            args[1] = Strings.toString(s_totalplayerCount);
+            string[] memory args = new string[](1);
+            string memory jsonString = "[";
+
+            for (uint256 i = 0; i < s_totalplayerCount; i++) {
+                uint256 value = s_PICContract.getplayerDetails(i).id;
+
+                jsonString = string.concat(
+                    jsonString,
+                    Strings.toString(value),
+                    (i == s_totalplayerCount - 1) ? "]" : ","
+                );
+            }
+            args[0] = jsonString;
 
             s_currentAuctionTime = block.timestamp;
 
@@ -248,12 +258,6 @@ contract Game is FunctionsClient, AutomationCompatibleInterface, Ownable {
                 s_gasLimit,
                 donId
             );
-            // Chainlink.Request memory request = buildOperatorRequest(
-            //     stringToBytes32(jobId),
-            //     this.fulfill.selector
-            // );
-            // request.add("PIC", addressToString(address(s_PICContract)));
-            // sendOperatorRequestTo(oracle, request, fee);
         }
     }
 

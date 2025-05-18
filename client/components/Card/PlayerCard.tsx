@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 
 interface Status {
-  status: "AUCTIONED" | "CURRENT" | "UPCOMING"
+  status: "SOLD" | "CURRENT" | "UPCOMING"
   label: string
   color: string // example: "bg-green-500/20 text-green-400"
 }

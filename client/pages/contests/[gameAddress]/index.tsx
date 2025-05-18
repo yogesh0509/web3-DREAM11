@@ -140,8 +140,8 @@ export default function ContestsPage({ gameAddress }: PageProps) {
   const getPlayerStatus = (player: Player) => {
     if (player.id < currentPlayer) {
       return {
-        status: 'AUCTIONED' as const,
-        label: 'Auctioned',
+        status: 'SOLD' as const,
+        label: 'Sold',
         color: 'bg-red-500/10 text-red-500'
       };
     } else if (player.id === currentPlayer) {

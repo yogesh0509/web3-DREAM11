@@ -175,10 +175,10 @@ function LeaderboardRow({
                 <Users className="w-4 h-4" />
                 <span>{numPurchased} Players Selected</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-yellow-400">
+              {/* <div className="flex items-center gap-2 text-sm text-yellow-400">
                 <Star className="w-4 h-4" />
                 <span>Team Score: {teamScore?.toString() || '0'}</span>
-              </div>
+              </div> */}
             </div>
           </div>
         </TableCell>

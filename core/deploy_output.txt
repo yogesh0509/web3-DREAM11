@@ -1,0 +1,32 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Return ==
+0: contract Game 0xC7BAF3624D1fCF973863B1Cee1816AC5d89ed4Aa
+
+== Logs ==
+  Game contract deployed:  0xC7BAF3624D1fCF973863B1Cee1816AC5d89ed4Aa
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 84532
+
+Estimated gas price: 0.000002064 gwei
+
+Estimated total gas used for script: 9645476
+
+Estimated amount required: 0.000000019908262464 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /media/yogesh/Local Disk/Study Material/web3-DREAM11/core/broadcast/Game.s.sol/84532/run-latest.json
+
+Sensitive values saved to: /media/yogesh/Local Disk/Study Material/web3-DREAM11/core/cache/Game.s.sol/84532/run-latest.json
+
