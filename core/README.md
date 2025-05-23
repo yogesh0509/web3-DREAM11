@@ -1,3 +1,6 @@
+# Flowchart
+![Flowchart](/assets/flowchart.png)
+
 # Algorithmic Steps & Mathematical Model
 
 ## Algorithmic Steps
