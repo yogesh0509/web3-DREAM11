@@ -1,1 +1,22 @@
-/out/
+# Foundry build and cache
+out/
+cache/
+
+# Dependencies
+lib/
+
+# Forge coverage outputs
+coverage/
+
+# VSCode settings (optional)
+.vscode/
+
+# macOS files
+.DS_Store
+
+# Node files (if you have a frontend in the same repo)
+node_modules/
+
+# Env files (if you use them)
+.env
+.env.*

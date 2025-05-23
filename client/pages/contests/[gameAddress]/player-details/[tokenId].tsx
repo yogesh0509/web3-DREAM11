@@ -293,8 +293,8 @@ const PlayerDetails: React.FC<PageProps> = ({ gameAddress, tokenId }) => {
     const playerId = parseInt(tokenId);
     if (playerId < currentPlayer) {
       return {
-        status: 'AUCTIONED',
-        label: 'Auctioned',
+        status: 'SOLD',
+        label: 'Sold',
         color: 'bg-red-500/10 text-red-500'
       };
     } else if (playerId === currentPlayer) {

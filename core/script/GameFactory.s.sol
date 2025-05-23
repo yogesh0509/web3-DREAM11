@@ -20,7 +20,7 @@ contract DeployGameFactory is Script {
     }
 
     function startGame(address factoryAddress, address gameAddress, uint256 auctionStartTime) external {
-        IPlayer.PlayerQuery[] memory players = new IPlayer.PlayerQuery[](4);
+        IPlayer.PlayerQuery[] memory players = new IPlayer.PlayerQuery[](2);
 
         players[0] = IPlayer.PlayerQuery({
             imageURI: "ipfs://bafybeif4uof2j5n3z33sifjaiwzpkhyqwenyohhgk5bexv2mbiasl5q3au",
@@ -36,19 +36,19 @@ contract DeployGameFactory is Script {
             id: 576
         });
 
-        players[2] = IPlayer.PlayerQuery({
-            imageURI: "ipfs://bafybeiegaabgbszh7fqrylhptbimtjlfpj5gkrqnkksq2p6bljnsxhhzlm",
-            name: "trent boult",
-            role: "bowler",
-            id: 8117
-        });
+        // players[2] = IPlayer.PlayerQuery({
+        //     imageURI: "ipfs://bafybeiegaabgbszh7fqrylhptbimtjlfpj5gkrqnkksq2p6bljnsxhhzlm",
+        //     name: "trent boult",
+        //     role: "bowler",
+        //     id: 8117
+        // });
 
-        players[3] = IPlayer.PlayerQuery({
-            imageURI: "ipfs://bafybeihswxtsfdrsusdnw4lrfnldrcohbmps2nvix4lq4iqxsb2zontnmy",
-            name: "steve smith",
-            role: "batsman",
-            id: 2250
-        });
+        // players[3] = IPlayer.PlayerQuery({
+        //     imageURI: "ipfs://bafybeihswxtsfdrsusdnw4lrfnldrcohbmps2nvix4lq4iqxsb2zontnmy",
+        //     name: "steve smith",
+        //     role: "batsman",
+        //     id: 2250
+        // });
 
         uint256 senderPrivateKey = vm.envUint("PRIVATE_KEY");
 
