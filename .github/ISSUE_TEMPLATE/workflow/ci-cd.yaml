@@ -1,0 +1,82 @@
+name: CI/CD Pipeline for Web3-DREAM11
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'  # Specify the Node.js version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build  # Replace with your build command
+
+  solidity:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Solidity
+        run: |
+          sudo apt-get install -y solc
+
+      - name: Compile Solidity contracts
+        run: |
+          mkdir build
+          solc --bin --abi -o build/ contracts/*.sol
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [build, solidity]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t web3-dream11 .
+
+      - name: Push Docker image
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+          docker tag web3-dream11 yourdockerhubusername/web3-dream11:latest
+          docker push yourdockerhubusername/web3-dream11:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy application
+        run: |
+          echo "Deploying application..."
+          # Add your deployment commands here (e.g., using SSH, Kubernetes, etc.)
